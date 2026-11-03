@@ -157,16 +157,42 @@ def prepare_image(path, kind):
     return Path(out.name)
 
 
+def split_first_comment(text):
+    """Captions may end with '---- FIRST COMMENT ... ----'; that part becomes the first comment."""
+    marker = "---- FIRST COMMENT"
+    if marker not in text:
+        return text.strip(), ""
+    caption, rest = text.split(marker, 1)
+    rest = rest.split("\n", 1)[1] if "\n" in rest else ""
+    return caption.strip(), rest.strip()
+
+
 def cmd_add(args):
+    caption = args.caption
+    if args.caption_file:
+        caption = Path(args.caption_file).read_text(encoding="utf-8")
+    elif caption is None and Path(args.files[0]).with_suffix(".txt").exists():
+        caption = Path(args.files[0]).with_suffix(".txt").read_text(encoding="utf-8")
+    caption, first_comment = split_first_comment(caption or "")
+    item_id = queue_item(args.type, args.files, caption, parse_when(args.at),
+                         first_comment=args.first_comment or first_comment, cover=args.cover)
+    if not args.no_push:
+        # A neutral message: commit messages are public.
+        commit_and_push([CONTENT_DIR], "Update content queue")
+        print("Pushed. The cloud will post it within ~5-15 minutes of that time.")
+    return item_id
+
+
+def queue_item(kind, files, caption, when, first_comment="", cover=None, origin=None):
+    """Validate, encrypt and add one post to the queue (not pushed). Returns its id."""
     key = _key(create=True)
-    files = [Path(f) for f in args.files]
+    files = [Path(f) for f in files]
     for f in files:
         if not f.exists():
             sys.exit("File not found: {}".format(f))
         if f.suffix.lower() not in VIDEO_EXTS | IMAGE_EXTS:
             sys.exit("{}: use .mp4/.mov videos or .jpg/.png images".format(f))
 
-    kind = args.type
     if not kind:
         if len(files) > 1:
             kind = "carousel"
@@ -181,45 +207,44 @@ def cmd_add(args):
     if kind == "carousel" and not 2 <= len(files) <= 10:
         sys.exit("A carousel needs 2 to 10 photos/videos.")
 
-    caption = args.caption
-    if args.caption_file:
-        caption = Path(args.caption_file).read_text(encoding="utf-8").strip()
-    elif caption is None and files[0].with_suffix(".txt").exists():
-        caption = files[0].with_suffix(".txt").read_text(encoding="utf-8").strip()
-    caption = caption or ""
-    if kind == "story" and caption:
-        print("Note: stories have no caption; it will be ignored.")
-        caption = ""
+    caption = (caption or "").strip()
+    if kind == "story" and (caption or first_comment):
+        print("Note: stories have no caption or comments; ignoring them.")
+        caption = first_comment = ""
     if len(caption) > 2200:
         sys.exit("Caption is {} characters; Instagram allows 2,200.".format(len(caption)))
     if caption.count("#") > 30:
         sys.exit("Instagram allows at most 30 hashtags.")
+    if cover and kind != "reel":
+        sys.exit("A cover image is only for reels.")
 
-    when = parse_when(args.at)
     item_id = secrets.token_hex(3)
     FILES_DIR.mkdir(parents=True, exist_ok=True)
-    stored = []
-    for n, f in enumerate(files):
-        is_video = f.suffix.lower() in VIDEO_EXTS
-        src = f if is_video else prepare_image(f, kind)
-        data = src.read_bytes()
+
+    def store(path, name, as_kind):
+        is_video = path.suffix.lower() in VIDEO_EXTS
+        data = (path if is_video else prepare_image(path, as_kind)).read_bytes()
         if len(data) > MAX_FILE_BYTES:
-            sys.exit("{} is {:.0f} MB; keep each file under 95 MB.".format(f, len(data) / 1e6))
-        name = "{}-{}.enc".format(item_id, n)
+            sys.exit("{} is {:.0f} MB; keep each file under 95 MB.".format(path, len(data) / 1e6))
         (FILES_DIR / name).write_bytes(encrypt(data, key))
-        stored.append({"name": name, "ext": ".mp4" if is_video else ".jpg"})
+        return {"name": name, "ext": ".mp4" if is_video else ".jpg"}
+
+    stored = [store(f, "{}-{}.enc".format(item_id, n), kind) for n, f in enumerate(files)]
+    item = {"id": item_id, "type": kind, "files": stored, "caption": caption,
+            "first_comment": first_comment, "post_at": when.isoformat(),
+            "added_at": datetime.now().astimezone().isoformat(), "source": [f.name for f in files]}
+    if cover:
+        item["cover"] = store(Path(cover), "{}-cover.enc".format(item_id), "cover")
+    if origin:
+        item["origin"] = origin
 
     queue = load_queue(key)
-    queue.append({"id": item_id, "type": kind, "files": stored, "caption": caption,
-                  "post_at": when.isoformat(), "added_at": datetime.now().astimezone().isoformat(),
-                  "source": [f.name for f in files]})
+    queue.append(item)
     save_queue(queue, key)
-    print("Queued {} {} for {} (id {}).".format(kind, ", ".join(f.name for f in files),
-                                                when.strftime("%a %d %b %H:%M"), item_id))
-    if not args.no_push:
-        # A neutral message: commit messages are public.
-        commit_and_push([CONTENT_DIR], "Update content queue")
-        print("Pushed. The cloud will post it within ~5-15 minutes of that time.")
+    print("Queued {:<8} {:<16} {} (id {}){}".format(
+        kind, when.strftime("%a %d %b %H:%M"), ", ".join(f.name for f in files)[:60], item_id,
+        " + cover" if cover else ""))
+    return item_id
 
 
 def cmd_list(args):
@@ -287,17 +312,20 @@ def publish_images(item, decrypted):
 
 
 def post_item(client, item, key, workdir):
-    decrypted = []
-    for f in item["files"]:
+    def unpack(f):
         path = Path(workdir) / (f["name"][:-4] + f["ext"])
         path.write_bytes(decrypt((FILES_DIR / f["name"]).read_bytes(), key))
-        decrypted.append((f, path))
-    urls = publish_images(item, decrypted)
+        return f, path
+
+    decrypted = [unpack(f) for f in item["files"]]
+    cover = unpack(item["cover"]) if item.get("cover") else None
+    urls = publish_images(item, decrypted + ([cover] if cover else []))
 
     kind, caption = item["type"], item.get("caption", "")
     f, path = decrypted[0]
     if kind == "reel":
-        return client.publish_reel(video_path=str(path), caption=caption)
+        return client.publish_reel(video_path=str(path), caption=caption,
+                                   cover_url=urls[cover[0]["name"]] if cover else None)
     if kind == "photo":
         return client.publish_photo(urls[f["name"]], caption)
     if kind == "story":
@@ -333,6 +361,13 @@ def cmd_post_due(args):
                 media_id = post_item(client, item, key, workdir)
                 record = {"status": "posted", "media_id": media_id,
                           "permalink": client.permalink(media_id)}
+                if item.get("first_comment"):
+                    # A failed comment shouldn't mark the post itself as failed.
+                    try:
+                        client.comment(media_id, item["first_comment"])
+                        record["first_comment"] = "posted (pin it in the app)"
+                    except InstagramError as exc:
+                        record["first_comment"] = "failed: {}".format(str(exc)[:200])
             except (InstagramError, RuntimeError, KeyError) as exc:
                 log.error("Failed to post %s: %s", item["id"], exc)
                 record = {"status": "failed", "error": str(exc)[:300]}
@@ -352,7 +387,9 @@ def main():
     add.add_argument("files", nargs="+")
     add.add_argument("--type", choices=TYPES, help="Default: reel for one video, photo for one image, carousel for several")
     add.add_argument("--caption")
-    add.add_argument("--caption-file")
+    add.add_argument("--caption-file", help="A '---- FIRST COMMENT ----' section in it becomes the first comment")
+    add.add_argument("--first-comment", help="Comment to add right after posting")
+    add.add_argument("--cover", help="Cover image for a reel")
     add.add_argument("--at", help='When to post, e.g. "2026-11-05 18:00", "tomorrow 09:30" or "now"')
     add.add_argument("--no-push", action="store_true", help="Don't push to GitHub yet")
     sub.add_parser("list", help="Show scheduled posts and their status")

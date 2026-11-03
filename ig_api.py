@@ -142,6 +142,10 @@ class InstagramClient:
             container_id = self._container({"media_type": "STORIES"}, video_path, video_url)
         return self._publish(container_id, "story")
 
+    def comment(self, media_id, text):
+        """Add a comment from your account under a post (the API can't pin it)."""
+        return self._request("POST", "{}/comments".format(media_id), params={"message": text})
+
     def permalink(self, media_id):
         if self.dry_run:
             return ""
