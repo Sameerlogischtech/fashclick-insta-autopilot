@@ -62,7 +62,7 @@ def _key(create=False):
                  "CONTENT_KEY={}\n".format(base64.urlsafe_b64encode(raw).decode()))
     os.environ["CONTENT_KEY"] = base64.urlsafe_b64encode(raw).decode()
     print("Created a new CONTENT_KEY in .env. Run this once so the cloud can read your posts:\n"
-          "  gh secret set CONTENT_KEY --body \"$(grep ^CONTENT_KEY= .env | cut -d= -f2)\"")
+          "  gh secret set CONTENT_KEY --body \"$(grep ^CONTENT_KEY= .env | cut -d= -f2-)\"")
     return raw
 
 
