@@ -1,3 +1,4 @@
+# Schedule owner: Sameerlogischtech
 # Posts scheduled reels, photos, carousels and stories when their time comes.
 # Schedule them from your Mac with:  python content.py add <files> --at "..."
 #
