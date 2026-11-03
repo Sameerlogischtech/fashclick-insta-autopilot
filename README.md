@@ -248,3 +248,19 @@ A Mac background job runs `auto_import.py` whenever something changes in `soical
 ```
 
 The Mac must be on when the schedule file is added (or within the hour). Posting itself still happens in the cloud.
+
+## 10. Facebook Pages
+
+Every schedule row whose platforms include Facebook is also queued for the brand's Facebook Page, with the row's Facebook caption:
+- reel → Facebook Reel
+- carousel → one post with all the photos
+- photo → photo post
+- story → Facebook Story (no stickers)
+
+Setup per brand:
+1. Add the "Manage everything on your Page" use case to the brand's Meta app (`pages_show_list`, `pages_read_engagement`, `pages_manage_posts`, `pages_manage_engagement`, `read_insights`).
+2. Assign the Page to the brand's system user.
+3. Generate a new token with the 4 `instagram_*` and these Page permissions. One token covers both.
+4. Save the token, then run `check_setup.py --account <brand> --save` to store `FB_PAGE_ID[_BRAND]`. Upload `.env` with `gh secret set -f .env`.
+
+A brand's Facebook stays off until its `FB_PAGE_ID` is set. Comment auto-replies are Instagram-only.
