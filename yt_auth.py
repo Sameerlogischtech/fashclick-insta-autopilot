@@ -43,6 +43,12 @@ def main():
     yt = build("youtube", "v3", credentials=creds, cache_discovery=False)
     items = yt.channels().list(part="snippet", mine=True).execute().get("items", [])
     channel = items[0]["snippet"]["title"] if items else "(no channel found)"
+    # Guard against picking the wrong channel (e.g. a personal one): the name must contain the brand.
+    if config.ACCOUNT.lower() not in channel.lower().replace(" ", "") and "--force" not in sys.argv:
+        sys.exit("That sign-in chose the channel {!r}, not {}'s. Nothing was saved.\n"
+                 "Run again and pick the {} channel (if it isn't offered, choose 'Use another account' and sign in "
+                 "with the Google account that owns it). Add --force only if the name really is right."
+                 .format(channel, config.ACCOUNT, config.ACCOUNT))
     client = json.loads(CLIENT_FILE.read_text())
     client = client.get("installed") or client.get("web") or {}
     key = "YT_REFRESH_TOKEN" if config.ACCOUNT == "fashclick" else "YT_REFRESH_TOKEN_" + config.ACCOUNT.upper()
