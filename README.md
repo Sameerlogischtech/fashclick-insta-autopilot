@@ -94,7 +94,7 @@ Each `add` encrypts the files and caption, saves them in `content/`, and pushes 
 **One-time setup:** the first `add` creates `CONTENT_KEY` in `.env`. Copy it to GitHub so the cloud can decrypt:
 
 ```bash
-gh secret set CONTENT_KEY --body "$(grep ^CONTENT_KEY= .env | cut -d= -f2)"
+gh secret set CONTENT_KEY --body "$(grep ^CONTENT_KEY= .env | cut -d= -f2-)"
 ```
 
 Keep `.env` safe. Without `CONTENT_KEY`, scheduled posts can't be read.

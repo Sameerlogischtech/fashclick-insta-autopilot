@@ -50,9 +50,10 @@ TYPES = ("reel", "photo", "carousel", "story")
 # ---------- encryption (AES-256-GCM; key lives in .env / GitHub secret CONTENT_KEY) ----------
 
 def _key(create=False):
-    key = os.getenv("CONTENT_KEY", "")
+    key = os.getenv("CONTENT_KEY", "").strip()
     if key:
-        return base64.urlsafe_b64decode(key)
+        # Restore '=' padding that copy/paste or `cut -d=` can drop.
+        return base64.urlsafe_b64decode(key + "=" * (-len(key) % 4))
     if not create:
         sys.exit("CONTENT_KEY is missing. Add it to .env (locally) or the GitHub secrets (cloud).")
     raw = secrets.token_bytes(32)
