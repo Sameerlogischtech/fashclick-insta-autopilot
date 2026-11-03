@@ -35,7 +35,8 @@ def main():
     from googleapiclient.discovery import build
     flow = InstalledAppFlow.from_client_secrets_file(str(CLIENT_FILE), SCOPES)
     print("A browser window will open. Sign in and choose the {} YouTube channel.".format(config.ACCOUNT))
-    creds = flow.run_local_server(port=0, prompt="consent", access_type="offline",
+    # select_account: always show Google's account / brand-channel chooser instead of reusing the last pick.
+    creds = flow.run_local_server(port=0, prompt="select_account consent", access_type="offline",
                                   authorization_prompt_message="", success_message=
                                   "Connected. You can close this tab and go back to Claude.")
     if not creds.refresh_token:
