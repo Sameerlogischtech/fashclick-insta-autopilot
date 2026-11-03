@@ -1,0 +1,31 @@
+{
+  "caption_keyword": {
+    "enabled": true,
+    "public_replies": [
+      "Sent it to your DMs 📩",
+      "Check your inbox 🙌",
+      "Just DMed you!"
+    ],
+    "dm": "Hey! Here's the link to try FashClick 👉 https://fashclick.io/\nAny questions, just reply here 🙂"
+  },
+
+  "comment_rules": [],
+  "comment_default": {
+    "public_replies": [],
+    "dm": null
+  },
+
+  "dm_rules": [
+    {
+      "name": "price question",
+      "keywords": ["price", "cost", "pricing", "how much"],
+      "reply": "Thanks for asking! Plans and free credits are all here 👉 https://fashclick.io/"
+    },
+    {
+      "name": "link request",
+      "keywords": ["link", "shoot", "try", "website"],
+      "reply": "Here you go 👉 https://fashclick.io/"
+    }
+  ],
+  "dm_default": null
+}

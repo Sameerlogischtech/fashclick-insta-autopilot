@@ -1,0 +1,57 @@
+# Answers Instagram comments and DMs every few minutes, in GitHub's cloud,
+# so it keeps working while your Mac is off.
+#
+# Needs these repository secrets (Settings -> Secrets and variables -> Actions):
+#   IG_ACCESS_TOKEN, IG_USER_ID, IG_APP_SECRET
+name: Instagram auto-reply
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"   # every 5 minutes (GitHub may run it a few minutes late)
+  workflow_dispatch:         # "Run workflow" button for a manual check
+
+# Never let two runs overlap, or the same comment could be answered twice.
+concurrency:
+  group: instagram-autoreply
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  reply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      # state.json remembers which comments were already answered. It lives in
+      # the Actions cache (private to this repo's workflows, even on a public repo).
+      - name: Restore memory of answered comments
+        uses: actions/cache/restore@v4
+        with:
+          path: state.json
+          key: autoreply-state-${{ github.run_id }}
+          restore-keys: autoreply-state-
+
+      - name: Check comments and DMs
+        env:
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          IG_APP_SECRET: ${{ secrets.IG_APP_SECRET }}
+          DRY_RUN: "false"
+        run: python poller.py --once
+
+      - name: Save memory of answered comments
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: state.json
+          key: autoreply-state-${{ github.run_id }}

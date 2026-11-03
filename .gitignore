@@ -1,0 +1,11 @@
+# secrets and private data: never commit
+.env
+state*.json
+queue.json
+*.log
+
+# local only
+.venv/
+__pycache__/
+reels/
+.DS_Store
