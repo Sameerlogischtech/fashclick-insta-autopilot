@@ -97,6 +97,21 @@ class FacebookClient:
         log.info("Published Facebook reel, video id %s", video_id)
         return video_id
 
+    def publish_video(self, video_path, description=""):
+        """A normal (long) Page video."""
+        if self.dry_run:
+            log.info("[DRY_RUN] FB video upload %s", video_path)
+            return "fb-dry-run-video"
+        with open(video_path, "rb") as fh:
+            resp = requests.post(self._url("{}/videos".format(self.page_id)), timeout=1800,
+                                 data={"description": description, "access_token": self.page_token()},
+                                 files={"source": (os.path.basename(video_path), fh, "video/mp4")})
+        body = resp.json() if resp.content else {}
+        if resp.status_code >= 400 or "error" in body:
+            raise InstagramError("FB video upload failed: {}".format(body.get("error", body)))
+        log.info("Published Facebook video %s", body["id"])
+        return body["id"]
+
     def publish_photo(self, image_url, message=""):
         r = self._request("POST", "{}/photos".format(self.page_id), data={"url": image_url, "message": message})
         log.info("Published Facebook photo, post id %s", r.get("post_id") or r["id"])

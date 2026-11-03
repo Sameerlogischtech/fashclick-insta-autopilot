@@ -56,5 +56,10 @@ jobs:
           FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
           FB_PAGE_ID_VAANICRAFT: ${{ secrets.FB_PAGE_ID_VAANICRAFT }}
           FB_PAGE_ID_VRITTOS: ${{ secrets.FB_PAGE_ID_VRITTOS }}
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          YT_REFRESH_TOKEN_VAANICRAFT: ${{ secrets.YT_REFRESH_TOKEN_VAANICRAFT }}
+          YT_REFRESH_TOKEN_VRITTOS: ${{ secrets.YT_REFRESH_TOKEN_VRITTOS }}
           DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
         run: python content.py post-due

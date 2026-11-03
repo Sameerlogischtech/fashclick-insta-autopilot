@@ -68,6 +68,10 @@ GRAPH_HOST = os.getenv("GRAPH_HOST", "") or (
 IG_MESSAGING_ID = _per_account("IG_MESSAGING_ID", fallback=False) or IG_USER_ID
 # The brand's Facebook Page (FB_PAGE_ID_VAANICRAFT ...; fashclick may use plain FB_PAGE_ID).
 FB_PAGE_ID = _per_account("FB_PAGE_ID", fallback=False)
+# YouTube: one Google OAuth client for all brands, one refresh token per channel (yt_auth.py).
+YT_CLIENT_ID = os.getenv("YT_CLIENT_ID", "")
+YT_CLIENT_SECRET = os.getenv("YT_CLIENT_SECRET", "")
+YT_REFRESH_TOKEN = _per_account("YT_REFRESH_TOKEN", fallback=False)
 
 # DRY_RUN logs what would be sent to Instagram instead of sending it.
 DRY_RUN = _bool("DRY_RUN")

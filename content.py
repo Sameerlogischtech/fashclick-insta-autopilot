@@ -44,7 +44,7 @@ PUBLISHED_DIR = config.PUBLISHED_DIR        # published/<account>/
 VIDEO_EXTS = {".mp4", ".mov"}
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp"}
 MAX_FILE_BYTES = 95 * 1024 * 1024   # GitHub refuses files over 100 MB
-TYPES = ("reel", "photo", "carousel", "story")
+TYPES = ("reel", "photo", "carousel", "story", "video")
 
 
 # ---------- encryption (AES-256-GCM; key lives in .env / GitHub secret CONTENT_KEY) ----------
@@ -184,7 +184,7 @@ def cmd_add(args):
     return item_id
 
 
-def queue_item(kind, files, caption, when, first_comment="", cover=None, origin=None, platform="instagram"):
+def queue_item(kind, files, caption, when, first_comment="", cover=None, origin=None, platform="instagram", title=""):
     """Validate, encrypt and add one post to the queue (not pushed). Returns its id."""
     key = _key(create=True)
     files = [Path(f) for f in files]
@@ -203,6 +203,8 @@ def queue_item(kind, files, caption, when, first_comment="", cover=None, origin=
         sys.exit("A reel is exactly one video.")
     if kind == "photo" and (len(files) != 1 or files[0].suffix.lower() not in IMAGE_EXTS):
         sys.exit("A photo post is exactly one image.")
+    if kind == "video" and (len(files) != 1 or files[0].suffix.lower() not in VIDEO_EXTS):
+        sys.exit("A long video is exactly one video file.")
     if kind == "story" and len(files) != 1:
         sys.exit("A story is one photo or one video. Add several stories one at a time.")
     if kind == "carousel" and not 2 <= len(files) <= 10:
@@ -212,11 +214,11 @@ def queue_item(kind, files, caption, when, first_comment="", cover=None, origin=
     if kind == "story" and (caption or first_comment):
         print("Note: stories have no caption or comments; ignoring them.")
         caption = first_comment = ""
-    if len(caption) > 2200:
+    if len(caption) > 2200 and platform == "instagram":
         sys.exit("Caption is {} characters; Instagram allows 2,200.".format(len(caption)))
-    if caption.count("#") > 30:
+    if caption.count("#") > 30 and platform == "instagram":
         sys.exit("Instagram allows at most 30 hashtags.")
-    if cover and kind != "reel":
+    if cover and kind not in ("reel", "video"):
         sys.exit("A cover image is only for reels.")
 
     item_id = secrets.token_hex(3)
@@ -240,6 +242,8 @@ def queue_item(kind, files, caption, when, first_comment="", cover=None, origin=
         item["origin"] = origin
     if platform != "instagram":
         item["platform"] = platform
+    if title:
+        item["title"] = title
 
     queue = load_queue(key)
     queue.append(item)
@@ -327,9 +331,14 @@ def post_item(client, item, key, workdir):
 
     kind, caption = item["type"], item.get("caption", "")
     f, path = decrypted[0]
+    if item.get("platform") == "youtube":
+        thumb = str(cover[1]) if cover and kind == "video" else None
+        return client.upload(str(path), item.get("title", ""), caption, thumbnail_path=thumb)
     if item.get("platform") == "facebook":
         if kind == "reel":
             return client.publish_reel(str(path), caption)
+        if kind == "video":
+            return client.publish_video(str(path), caption)
         if kind == "photo":
             return client.publish_photo(urls[f["name"]], caption)
         if kind == "carousel":   # Facebook has no carousel post: several photos in one post
@@ -360,7 +369,8 @@ def cmd_post_due(args):
     if not QUEUE_FILE.exists():
         log.info("[%s] Nothing scheduled yet.", config.ACCOUNT)
         return
-    ready = {"instagram": bool(config.IG_USER_ID), "facebook": bool(config.FB_PAGE_ID)}
+    ready = {"instagram": bool(config.IG_USER_ID), "facebook": bool(config.FB_PAGE_ID),
+             "youtube": bool(config.YT_REFRESH_TOKEN)}
     if not any(ready.values()) and not config.DRY_RUN:
         log.info("[%s] Not set up yet (no IG_USER_ID_%s); skipping.", config.ACCOUNT, config.ACCOUNT.upper())
         return
@@ -380,7 +390,11 @@ def cmd_post_due(args):
 
     def client_for(platform):
         if platform not in clients:
-            clients[platform] = FacebookClient() if platform == "facebook" else InstagramClient()
+            if platform == "youtube":
+                from yt_api import YouTubeClient
+                clients[platform] = YouTubeClient()
+            else:
+                clients[platform] = FacebookClient() if platform == "facebook" else InstagramClient()
         return clients[platform]
 
     for item in due:
@@ -391,8 +405,9 @@ def cmd_post_due(args):
                 client = client_for(platform)
                 media_id = post_item(client, item, key, workdir)
                 record = {"status": "posted", "media_id": media_id,
-                          "permalink": client.permalink(media_id)}
-                if item.get("first_comment") and platform == "instagram":
+                          "permalink": client.permalink(media_id, item["type"] != "video") if platform == "youtube"
+                          else client.permalink(media_id)}
+                if item.get("first_comment") and platform in ("instagram", "youtube"):
                     # A failed comment shouldn't mark the post itself as failed.
                     try:
                         client.comment(media_id, item["first_comment"])

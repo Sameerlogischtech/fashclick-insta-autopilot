@@ -56,6 +56,8 @@ def _to_post(row, platform="instagram"):
         first = ""   # Facebook captions already end with their question; no separate first comment
     if row["type"] == "reel":
         return "reel", [media], caption, first, (row.get("cover") or None) if platform == "instagram" else None
+    if row["type"] == "video":   # long video: YouTube (thumbnail = cover) and Facebook
+        return "video", [media], caption, first, (row.get("cover") or None) if platform == "youtube" else None
     # "post" or "carousel (N slides)": a folder of 01.png, 02.png, ...
     slides = sorted(p for p in media.iterdir()
                     if re.fullmatch(r"\d+\.(png|jpe?g|webp|mp4|mov)", p.name, re.I))
@@ -71,6 +73,7 @@ def main():
     parser.add_argument("--product", help="Product name in the schedule (default: the --account, e.g. VaaniCraft)")
     parser.add_argument("--apply", action="store_true", help="Queue and push (otherwise just preview)")
     parser.add_argument("--facebook", action="store_true", help="Include Facebook rows even without FB_PAGE_ID (preview/testing)")
+    parser.add_argument("--youtube", action="store_true", help="Include YouTube rows even before the channel is connected")
     args = parser.parse_args()
 
     schedule = json.loads(Path(args.schedule).read_text(encoding="utf-8"))
@@ -89,11 +92,13 @@ def main():
     queued = skipped = errors = 0
     product = args.product or config.ACCOUNT
     print("Account: {}  (schedule product: {})".format(config.ACCOUNT, product))
-    platforms = ["instagram"] + (["facebook"] if (config.FB_PAGE_ID or args.facebook) else [])
-    print("Platforms: " + ", ".join(platforms) + ("" if "facebook" in platforms else
-          "  (Facebook skipped: no FB_PAGE_ID_{} yet)".format(config.ACCOUNT.upper())))
+    platforms = ["instagram"] + (["facebook"] if (config.FB_PAGE_ID or args.facebook) else []) + \
+        (["youtube"] if (config.YT_REFRESH_TOKEN or args.youtube) else [])
+    print("Platforms: " + ", ".join(platforms))
     for row, when, platform in sorted(rows_for(schedule, product, platforms), key=lambda r: (r[1], r[2])):
         origin = "{} {} {} {}".format(row["date"], row["time_ist"], row["type"], row["id"])
+        if platform == "youtube" and row["type"] not in ("reel", "video"):
+            continue   # YouTube Community posts have no API; they stay manual
         if platform != "instagram":
             origin = platform + "|" + origin   # Instagram keeps the original key, so old queues still match
         slot = "{:<9} {:<20} {}".format(platform, row["type"], when.astimezone().strftime("%a %d %b %H:%M"))
@@ -109,6 +114,11 @@ def main():
         # the rest of the week still gets queued. Fix it and run again.
         try:
             kind, files, caption, first, cover = to_post(row, platform)
+            title = ""
+            if platform == "youtube":
+                from yt_api import parse_caption
+                title, caption, first = parse_caption(Path(row["caption_youtube"]).read_text(encoding="utf-8")
+                                                      if row.get("caption_youtube") else "")
             label = "{:<9} {:<8} {}  {:>2} file(s){}{}".format(
                 platform, kind, when.astimezone().strftime("%a %d %b %H:%M"), len(files),
                 "  +cover" if cover else "", "  +1st comment" if first else "")
@@ -117,7 +127,7 @@ def main():
                                       "keyword " + keyword.group(1) if keyword else ""))
             if args.apply:
                 content.queue_item(kind, files, caption, when, first_comment=first, cover=cover,
-                                   origin=origin, platform=platform)
+                                   origin=origin, platform=platform, title=title)
             queued += 1
         except (SystemExit, Exception) as exc:
             print("ERROR           {}: {}".format(slot, exc))

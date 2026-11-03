@@ -12,3 +12,5 @@ reels/
 .auto_import.lock
 .auto_import_last_alert
 .import.lock
+youtube_client.json
+client_secret*.json
