@@ -11,3 +11,4 @@ reels/
 .DS_Store
 .auto_import.lock
 .auto_import_last_alert
+.import.lock

@@ -9,6 +9,7 @@ file, splits off the '---- FIRST COMMENT ----' part, adds reel covers, and
 skips anything already queued or already in the past. Safe to run again.
 """
 import argparse
+import fcntl
 import json
 import re
 import sys
@@ -67,6 +68,13 @@ def main():
     args = parser.parse_args()
 
     schedule = json.loads(Path(args.schedule).read_text(encoding="utf-8"))
+    if args.apply:
+        # Several things can import (auto_import.py, the weekly routine's autopilot_sync.py, a person).
+        # Hold a per-brand lock and read the queue only after getting it, so two imports at the same
+        # time wait for each other instead of both queuing the same post.
+        content.CONTENT_DIR.mkdir(parents=True, exist_ok=True)
+        lock = open(content.CONTENT_DIR / ".import.lock", "w")
+        fcntl.flock(lock, fcntl.LOCK_EX)
     existing = set()
     if content.QUEUE_FILE.exists():
         existing = {i.get("origin") for i in content.load_queue(content._key())}
