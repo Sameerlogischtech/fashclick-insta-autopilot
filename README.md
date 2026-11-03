@@ -220,3 +220,19 @@ A system-user token set to **Never** doesn't expire, so you can skip this.
 ⚠️ **Don't also run `poller.py` on your Mac** while the cloud one is on. They keep separate memories, so both would answer the same comment.
 
 To change replies or the link, edit `rules.json`, then commit and push. The next run uses it.
+
+## 8. Several brands (FashClick, VaaniCraft, VrittOS)
+
+Each brand has its own folder in `accounts/<brand>/rules.json` (keyword replies and links) and its own queue in `content/<brand>/`. Add `--account <brand>` to any command. Without it, the command uses fashclick.
+
+```bash
+.venv/bin/python import_schedule.py "<schedule.json>" --account vaanicraft --apply
+.venv/bin/python content.py list --account vrittos
+.venv/bin/python check_setup.py --account vaanicraft
+```
+
+Settings per brand (in `.env` and as GitHub secrets; NAME in capitals):
+- `IG_USER_ID_VAANICRAFT`, `IG_USER_ID_VRITTOS`: each brand's Instagram account id. FashClick keeps using `IG_USER_ID`.
+- `IG_ACCESS_TOKEN_<NAME>`: only if that brand needs its own token. Otherwise the shared `IG_ACCESS_TOKEN` is used.
+
+Both workflows run every brand side by side. A brand whose `IG_USER_ID_…` secret isn't set is skipped. To add a brand: create `accounts/<brand>/rules.json`, add it to the `matrix` in both workflow files, and add its secrets.

@@ -1,20 +1,18 @@
 # Schedule owner: Sameerlogischtech
 # Answers Instagram comments and DMs every few minutes, in GitHub's cloud,
-# so it keeps working while your Mac is off.
+# so it keeps working while your Mac is off. Runs once per brand.
 #
 # Needs these repository secrets (Settings -> Secrets and variables -> Actions):
-#   IG_ACCESS_TOKEN, IG_USER_ID, IG_APP_SECRET
+#   IG_ACCESS_TOKEN                    shared token (or IG_ACCESS_TOKEN_<BRAND> per brand)
+#   IG_USER_ID                         fashclick's Instagram id
+#   IG_USER_ID_VAANICRAFT, IG_USER_ID_VRITTOS
+# A brand without its IG_USER_ID secret is skipped.
 name: Instagram auto-reply
 
 on:
   schedule:
     - cron: "*/5 * * * *"   # every 5 minutes (public repo: Actions minutes are free)
   workflow_dispatch:         # "Run workflow" button for a manual check
-
-# Never let two runs overlap, or the same comment could be answered twice.
-concurrency:
-  group: instagram-autoreply
-  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -23,6 +21,16 @@ jobs:
   reply:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    strategy:
+      fail-fast: false   # one brand's problem never stops the others
+      matrix:
+        account: [fashclick, vaanicraft, vrittos]
+    # Never let two runs for the same brand overlap, or a comment could be answered twice.
+    concurrency:
+      group: autoreply-${{ matrix.account }}
+      cancel-in-progress: false
+    env:
+      ACCOUNT: ${{ matrix.account }}
     steps:
       - uses: actions/checkout@v4
 
@@ -33,27 +41,30 @@ jobs:
 
       - run: pip install -r requirements.txt
 
-      # state.json remembers which comments were already answered. It lives in
+      # state-<brand>.json remembers which comments were already answered. It lives in
       # the Actions cache (private to this repo's workflows, even on a public repo).
       - name: Restore memory of answered comments
         uses: actions/cache/restore@v4
         with:
-          path: state.json
-          key: autoreply-state-${{ github.run_id }}
-          restore-keys: autoreply-state-
+          path: state-${{ matrix.account }}.json
+          key: autoreply-${{ matrix.account }}-${{ github.run_id }}
+          restore-keys: autoreply-${{ matrix.account }}-
 
       - name: Check comments and DMs
         env:
           IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
           IG_USER_ID: ${{ secrets.IG_USER_ID }}
-          IG_APP_SECRET: ${{ secrets.IG_APP_SECRET }}
+          IG_USER_ID_VAANICRAFT: ${{ secrets.IG_USER_ID_VAANICRAFT }}
+          IG_USER_ID_VRITTOS: ${{ secrets.IG_USER_ID_VRITTOS }}
+          IG_ACCESS_TOKEN_VAANICRAFT: ${{ secrets.IG_ACCESS_TOKEN_VAANICRAFT }}
+          IG_ACCESS_TOKEN_VRITTOS: ${{ secrets.IG_ACCESS_TOKEN_VRITTOS }}
           DRY_RUN: "false"
           QUIET_LOGS: "true"   # run logs are public: no usernames or message text
         run: python poller.py --once
 
       - name: Save memory of answered comments
-        if: always()
+        if: always() && hashFiles(format('state-{0}.json', matrix.account)) != ''
         uses: actions/cache/save@v4
         with:
-          path: state.json
-          key: autoreply-state-${{ github.run_id }}
+          path: state-${{ matrix.account }}.json
+          key: autoreply-${{ matrix.account }}-${{ github.run_id }}

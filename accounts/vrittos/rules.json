@@ -1,0 +1,31 @@
+{
+  "caption_keyword": {
+    "enabled": true,
+    "public_replies": [
+      "Sent you a DM 📩 (check message requests)",
+      "Check your DMs 🙌",
+      "Just DMed you!"
+    ],
+    "dm": "Hey! 👋 Thanks for commenting.\nReply LINK and I'll send it right over 🔗"
+  },
+
+  "comment_rules": [],
+  "comment_default": {
+    "public_replies": [],
+    "dm": null
+  },
+
+  "dm_rules": [
+    {
+      "name": "price question",
+      "keywords": ["price", "cost", "pricing", "how much"],
+      "reply": "Thanks for asking! Plans and pricing are all here 👉 https://vrittos.ai/"
+    },
+    {
+      "name": "link request",
+      "keywords": ["link", "yes", "send", "shoot", "try", "website"],
+      "reply": "Here you go 👉 https://vrittos.ai/\nAny questions, just reply here 🙂"
+    }
+  ],
+  "dm_default": null
+}

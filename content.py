@@ -35,11 +35,11 @@ import config
 
 log = logging.getLogger("content")
 
-CONTENT_DIR = config.BASE_DIR / "content"
+CONTENT_DIR = config.CONTENT_DIR            # content/<account>/
 FILES_DIR = CONTENT_DIR / "files"
 QUEUE_FILE = CONTENT_DIR / "queue.enc"
 POSTED_FILE = CONTENT_DIR / "posted.json"   # written by the poster; ids and media ids only
-PUBLISHED_DIR = config.BASE_DIR / "published"
+PUBLISHED_DIR = config.PUBLISHED_DIR        # published/<account>/
 
 VIDEO_EXTS = {".mp4", ".mov"}
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp"}
@@ -86,7 +86,7 @@ def load_queue(key):
 
 
 def save_queue(queue, key):
-    CONTENT_DIR.mkdir(exist_ok=True)
+    CONTENT_DIR.mkdir(parents=True, exist_ok=True)
     QUEUE_FILE.write_bytes(encrypt(json.dumps(queue, ensure_ascii=False).encode(), key))
 
 
@@ -289,7 +289,7 @@ def cmd_retry(args):
 
 def publish_images(item, decrypted):
     """Copy this post's photos to published/ and return their public URLs."""
-    PUBLISHED_DIR.mkdir(exist_ok=True)
+    PUBLISHED_DIR.mkdir(parents=True, exist_ok=True)
     names = {}
     for f, path in decrypted:
         if f["ext"] == ".jpg":
@@ -302,7 +302,8 @@ def publish_images(item, decrypted):
         return {k: "https://example.invalid/" + v for k, v in names.items()}
     commit_and_push([PUBLISHED_DIR], "Publish photos for a post")
     sha = git("rev-parse", "HEAD")
-    urls = {k: "https://raw.githubusercontent.com/{}/{}/published/{}".format(repo_slug(), sha, v)
+    folder = PUBLISHED_DIR.relative_to(config.BASE_DIR).as_posix()
+    urls = {k: "https://raw.githubusercontent.com/{}/{}/{}/{}".format(repo_slug(), sha, folder, v)
             for k, v in names.items()}
     for url in urls.values():   # GitHub can take a few seconds to serve a new file
         for _ in range(12):
@@ -343,7 +344,10 @@ def post_item(client, item, key, workdir):
 def cmd_post_due(args):
     from ig_api import InstagramClient, InstagramError
     if not QUEUE_FILE.exists():
-        log.info("Nothing scheduled yet.")
+        log.info("[%s] Nothing scheduled yet.", config.ACCOUNT)
+        return
+    if not config.IG_USER_ID and not config.DRY_RUN:
+        log.info("[%s] Not set up yet (no IG_USER_ID_%s); skipping.", config.ACCOUNT, config.ACCOUNT.upper())
         return
     key = _key()
     queue = load_queue(key)
@@ -351,7 +355,8 @@ def cmd_post_due(args):
     now = datetime.now(timezone.utc)
     due = [i for i in sorted(queue, key=lambda i: i["post_at"])
            if i["id"] not in posted and datetime.fromisoformat(i["post_at"]) <= now]
-    log.info("%d scheduled item(s), %d due now%s", len(queue), len(due), " [DRY_RUN]" if config.DRY_RUN else "")
+    log.info("[%s] %d scheduled item(s), %d due now%s", config.ACCOUNT, len(queue), len(due),
+             " [DRY_RUN]" if config.DRY_RUN else "")
     if not due:
         return
     client = InstagramClient()

@@ -4,7 +4,7 @@
     python import_schedule.py <schedule.json> --apply     # actually queue + push
 
 Without --apply it only shows what it would queue. It picks the rows for one
-product (FashClick by default) that go to Instagram, uses the Instagram caption
+product (the --account, e.g. --account vaanicraft) that go to Instagram, uses the Instagram caption
 file, splits off the '---- FIRST COMMENT ----' part, adds reel covers, and
 skips anything already queued or already in the past. Safe to run again.
 """
@@ -16,6 +16,7 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+import config
 import content
 from autoreply import CAPTION_KEYWORD  # same rule the auto-reply bot uses
 
@@ -24,7 +25,7 @@ def rows_for(schedule, product):
     # e.g. "Asia/Kolkata (IST, UTC+05:30)" -> Asia/Kolkata
     tz = ZoneInfo(schedule.get("timezone", "Asia/Kolkata").split()[0])
     for row in schedule["items"]:
-        if row.get("product") != product or "instagram" not in row.get("platforms", "").lower():
+        if row.get("product", "").lower() != product.lower() or "instagram" not in row.get("platforms", "").lower():
             continue
         when = datetime.strptime(row["date"] + " " + row["time_ist"], "%Y-%m-%d %H:%M").replace(tzinfo=tz)
         yield row, when
@@ -51,7 +52,7 @@ def to_post(row):
 def main():
     parser = argparse.ArgumentParser(description="Queue Instagram posts from a schedule JSON")
     parser.add_argument("schedule")
-    parser.add_argument("--product", default="FashClick")
+    parser.add_argument("--product", help="Product name in the schedule (default: the --account, e.g. VaaniCraft)")
     parser.add_argument("--apply", action="store_true", help="Queue and push (otherwise just preview)")
     args = parser.parse_args()
 
@@ -62,7 +63,9 @@ def main():
     now = datetime.now().astimezone()
 
     queued = skipped = 0
-    for row, when in sorted(rows_for(schedule, args.product), key=lambda r: r[1]):
+    product = args.product or config.ACCOUNT
+    print("Account: {}  (schedule product: {})".format(config.ACCOUNT, product))
+    for row, when in sorted(rows_for(schedule, product), key=lambda r: r[1]):
         origin = "{} {} {} {}".format(row["date"], row["time_ist"], row["type"], row["id"])
         kind, files, caption, first, cover = to_post(row)
         label = "{:<8} {}  {:>2} file(s){}{}".format(

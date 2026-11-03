@@ -83,6 +83,9 @@ def main():
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
+    if client is None:
+        log.info("[%s] Not set up yet (no IG_USER_ID_%s); skipping.", config.ACCOUNT, config.ACCOUNT.upper())
+        return
     cutoff = start_time(args.since)
     log.info("Watching %s's last %d posts%s, answering anything after %s%s",
              "the account" if config.QUIET_LOGS else config.IG_USER_ID, args.posts,

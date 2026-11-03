@@ -1,8 +1,10 @@
 # Schedule owner: Sameerlogischtech
 # Posts scheduled reels, photos, carousels and stories when their time comes.
-# Schedule them from your Mac with:  python content.py add <files> --at "..."
+# Schedule them from your Mac with:  python content.py add <files> --at "..." --account <brand>
+# Runs once per brand; a brand without its IG_USER_ID secret is skipped.
 #
-# Needs repository secrets: IG_ACCESS_TOKEN, IG_USER_ID, CONTENT_KEY
+# Needs repository secrets: IG_ACCESS_TOKEN, CONTENT_KEY,
+#   IG_USER_ID (fashclick), IG_USER_ID_VAANICRAFT, IG_USER_ID_VRITTOS
 name: Publish scheduled content
 
 on:
@@ -15,18 +17,23 @@ on:
         type: boolean
         default: false
 
-# Never let two runs overlap, or the same post could go out twice.
-concurrency:
-  group: publish-content
-  cancel-in-progress: false
-
 permissions:
-  contents: write   # to save published/ photos and content/posted.json
+  contents: write   # to save published/<brand>/ photos and content/<brand>/posted.json
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false   # one brand's problem never stops the others
+      matrix:
+        account: [fashclick, vaanicraft, vrittos]
+    # Never let two runs for the same brand overlap, or the same post could go out twice.
+    concurrency:
+      group: publish-${{ matrix.account }}
+      cancel-in-progress: false
+    env:
+      ACCOUNT: ${{ matrix.account }}
     steps:
       - uses: actions/checkout@v4
 
@@ -41,6 +48,10 @@ jobs:
         env:
           IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
           IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          IG_USER_ID_VAANICRAFT: ${{ secrets.IG_USER_ID_VAANICRAFT }}
+          IG_USER_ID_VRITTOS: ${{ secrets.IG_USER_ID_VRITTOS }}
+          IG_ACCESS_TOKEN_VAANICRAFT: ${{ secrets.IG_ACCESS_TOKEN_VAANICRAFT }}
+          IG_ACCESS_TOKEN_VRITTOS: ${{ secrets.IG_ACCESS_TOKEN_VRITTOS }}
           CONTENT_KEY: ${{ secrets.CONTENT_KEY }}
           DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
         run: python content.py post-due

@@ -12,7 +12,8 @@ from ig_api import InstagramClient, InstagramError
 
 log = logging.getLogger("autoreply")
 
-client = InstagramClient()
+# None until this account's IG_USER_ID is set, so unconfigured brands are skipped, not crashed.
+client = InstagramClient() if (config.IG_USER_ID or config.DRY_RUN) else None
 _state_lock = threading.Lock()
 
 
