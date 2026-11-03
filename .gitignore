@@ -14,3 +14,4 @@ reels/
 .import.lock
 youtube_client.json
 client_secret*.json
+.yt_pending_*

@@ -50,12 +50,48 @@ def remote_sign_in(InstalledAppFlow):
     return flow.credentials
 
 
+def pending_file():
+    return config.BASE_DIR / ".yt_pending_{}.json".format(config.ACCOUNT)
+
+
+def make_link(InstalledAppFlow):
+    """Step 1 of the two-step remote sign-in: print the link and remember its PKCE verifier."""
+    import os
+    os.environ.setdefault("OAUTHLIB_INSECURE_TRANSPORT", "1")
+    flow = InstalledAppFlow.from_client_secrets_file(str(CLIENT_FILE), SCOPES, redirect_uri="http://localhost:1")
+    url, state = flow.authorization_url(prompt="select_account consent", access_type="offline")
+    pending_file().write_text(json.dumps({"code_verifier": flow.code_verifier, "state": state}))
+    pending_file().chmod(0o600)
+    print(url)
+
+
+def finish_link(InstalledAppFlow, answer):
+    """Step 2: exchange the address the owner sent back."""
+    import os
+    os.environ.setdefault("OAUTHLIB_INSECURE_TRANSPORT", "1")
+    if not pending_file().exists():
+        sys.exit("No link was made for {} yet. Run with --link first.".format(config.ACCOUNT))
+    saved = json.loads(pending_file().read_text())
+    if "code=" not in answer:
+        sys.exit("That doesn't contain a sign-in code.")
+    flow = InstalledAppFlow.from_client_secrets_file(str(CLIENT_FILE), SCOPES, redirect_uri="http://localhost:1",
+                                                     state=saved["state"], code_verifier=saved["code_verifier"],
+                                                     autogenerate_code_verifier=False)
+    flow.fetch_token(authorization_response=answer.strip().replace("https://", "http://", 1))
+    pending_file().unlink()
+    return flow.credentials
+
+
 def main():
     if not CLIENT_FILE.exists():
         sys.exit("Put the downloaded OAuth client file here as youtube_client.json first.")
     from google_auth_oauthlib.flow import InstalledAppFlow
     from googleapiclient.discovery import build
-    if "--remote" in sys.argv:
+    if "--link" in sys.argv:
+        return make_link(InstalledAppFlow)
+    if "--code" in sys.argv:
+        creds = finish_link(InstalledAppFlow, sys.argv[sys.argv.index("--code") + 1])
+    elif "--remote" in sys.argv:
         creds = remote_sign_in(InstalledAppFlow)
     else:
         flow = InstalledAppFlow.from_client_secrets_file(str(CLIENT_FILE), SCOPES)
