@@ -264,3 +264,21 @@ Setup per brand:
 4. Save the token, then run `check_setup.py --account <brand> --save` to store `FB_PAGE_ID[_BRAND]`. Upload `.env` with `gh secret set -f .env`.
 
 A brand's Facebook stays off until its `FB_PAGE_ID` is set. Comment auto-replies are Instagram-only.
+
+## 11. YouTube channels
+
+Every schedule row marked "YouTube Short" (and every long `video` row) is also queued for the brand's YouTube channel. Title, description and pinned-comment text come from the row's `-youtube.txt` (TITLE / DESCRIPTION / PINNED COMMENT). Each upload is public and sets YouTube's "altered or synthetic content" flag. The pinned-comment text is posted as a comment; pin it in YouTube Studio, since the API can't. Community posts have no API and stay manual.
+
+Setup (done once):
+1. In Google Cloud project `insta-autopilot`, enable the YouTube Data API v3.
+2. Set the OAuth app to External and publish it ("In production"), so sign-ins don't expire after 7 days. Leave the logo empty.
+3. Create a Desktop OAuth client and save it as `youtube_client.json`. It is kept out of git.
+
+Connect a channel (needs the channel **owner**; Studio editors can't authorize apps):
+- You own it: `.venv/bin/python yt_auth.py --account <brand>` and pick the channel in Google's chooser.
+- Someone else owns it:
+  1. `yt_auth.py --account <brand> --link` prints a link for the owner.
+  2. They sign in and send back the `http://localhost:1/?...code=...` address.
+  3. Run `yt_auth.py --account <brand> --code '<that address>'`.
+
+The code expires within minutes. Sign-in refuses to save if the channel name doesn't contain the brand. Afterwards, upload the keys with `gh secret set -f .env`.
