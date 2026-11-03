@@ -32,8 +32,18 @@ def rows_for(schedule, product):
 
 
 def to_post(row):
-    """-> (kind, files, caption, first_comment, cover)"""
+    """-> (kind, files, caption, first_comment, cover), after checking every file exists."""
+    kind, files, caption, first, cover = _to_post(row)
+    for f in list(files) + ([Path(cover)] if cover else []):
+        if not Path(f).is_file():
+            raise FileNotFoundError("missing file {}".format(f))
+    return kind, files, caption, first, cover
+
+
+def _to_post(row):
     media = Path(row["media"])
+    if not media.exists():
+        raise FileNotFoundError("missing {}".format(media))
     if row["type"] == "story":
         return "story", [media], "", "", None
     caption, first = content.split_first_comment(
@@ -62,36 +72,46 @@ def main():
         existing = {i.get("origin") for i in content.load_queue(content._key())}
     now = datetime.now().astimezone()
 
-    queued = skipped = 0
+    queued = skipped = errors = 0
     product = args.product or config.ACCOUNT
     print("Account: {}  (schedule product: {})".format(config.ACCOUNT, product))
     for row, when in sorted(rows_for(schedule, product), key=lambda r: r[1]):
         origin = "{} {} {} {}".format(row["date"], row["time_ist"], row["type"], row["id"])
-        kind, files, caption, first, cover = to_post(row)
-        label = "{:<8} {}  {:>2} file(s){}{}".format(
-            kind, when.astimezone().strftime("%a %d %b %H:%M"), len(files),
-            "  +cover" if cover else "", "  +1st comment" if first else "")
+        slot = "{:<20} {}".format(row["type"], when.astimezone().strftime("%a %d %b %H:%M"))
         if origin in existing:
-            print("already queued  " + label)
+            print("already queued  " + slot)
             skipped += 1
             continue
         if when < now:
-            print("in the past     " + label)
+            print("in the past     " + slot)
             skipped += 1
             continue
-        keyword = CAPTION_KEYWORD.search(caption) if caption else None
-        print("{}  {}  {}".format("QUEUE " if args.apply else "would queue", label,
-                                  "keyword " + keyword.group(1) if keyword else ""))
-        if args.apply:
-            content.queue_item(kind, files, caption, when, first_comment=first, cover=cover, origin=origin)
-        queued += 1
+        # One bad item (missing file, wrong photo size...) is reported and skipped;
+        # the rest of the week still gets queued. Fix it and run again.
+        try:
+            kind, files, caption, first, cover = to_post(row)
+            label = "{:<8} {}  {:>2} file(s){}{}".format(
+                kind, when.astimezone().strftime("%a %d %b %H:%M"), len(files),
+                "  +cover" if cover else "", "  +1st comment" if first else "")
+            keyword = CAPTION_KEYWORD.search(caption) if caption else None
+            print("{}  {}  {}".format("QUEUE " if args.apply else "would queue", label,
+                                      "keyword " + keyword.group(1) if keyword else ""))
+            if args.apply:
+                content.queue_item(kind, files, caption, when, first_comment=first, cover=cover,
+                                   origin=origin)
+            queued += 1
+        except (SystemExit, Exception) as exc:
+            print("ERROR           {}: {}".format(slot, exc))
+            errors += 1
 
-    print("\n{} to queue, {} skipped.".format(queued, skipped))
+    print("\n{} to queue, {} skipped, {} error(s).".format(queued, skipped, errors))
     if args.apply and queued:
         content.commit_and_push([content.CONTENT_DIR], "Update content queue")
         print("Pushed. GitHub will post each one within ~5-15 minutes of its time.")
     elif queued:
         print("Run again with --apply to queue them.")
+    if errors:
+        sys.exit(2)
 
 
 if __name__ == "__main__":

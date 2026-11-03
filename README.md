@@ -236,3 +236,15 @@ Settings per brand (in `.env` and as GitHub secrets; NAME in capitals):
 - `IG_ACCESS_TOKEN_<NAME>`: only if that brand needs its own token. Otherwise the shared `IG_ACCESS_TOKEN` is used.
 
 Both workflows run every brand side by side. A brand whose `IG_USER_ID_…` secret isn't set is skipped. To add a brand: create `accounts/<brand>/rules.json`, add it to the `matrix` in both workflow files, and add its secrets.
+
+## 9. New weeks import automatically
+
+A Mac background job runs `auto_import.py` whenever something changes in `soical media/Schedule/`, and once an hour. For every schedule file whose week has not ended, it imports all set-up brands. Items already queued or in the past are skipped. You get a Mac notification when posts are queued, or when an item has a problem (for example a missing file or a wrong photo shape). Details go to `auto_import.log`. Fix the problem and it is picked up on the next run.
+
+```bash
+./install_auto_import.sh            # install
+./install_auto_import.sh --remove   # turn it off
+.venv/bin/python auto_import.py --dry-run   # preview
+```
+
+The Mac must be on when the schedule file is added (or within the hour). Posting itself still happens in the cloud.
