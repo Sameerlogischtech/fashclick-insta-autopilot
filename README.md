@@ -105,6 +105,8 @@ The bot reads each reel's caption and answers only that reel's keyword, in any l
 
 Each person gets **one** DM per reel, even if they comment twice.
 
+**Why two steps:** Instagram makes links in a first message from a business unclickable until the person accepts the chat. So the first DM asks them to reply **LINK**. Their reply accepts the chat, and the bot answers with the tappable fashclick.io link (`dm_rules` → "link request").
+
 ### Edit what it sends: **`rules.json`**
 - `caption_keyword`: the public replies (one is picked at random) and the DM sent for caption keywords.
 - `comment_rules`: optional fixed keywords that work on every post.

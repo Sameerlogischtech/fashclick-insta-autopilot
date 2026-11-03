@@ -2,11 +2,11 @@
   "caption_keyword": {
     "enabled": true,
     "public_replies": [
-      "Sent it to your DMs 📩",
-      "Check your inbox 🙌",
+      "Sent you a DM 📩 (check message requests)",
+      "Check your DMs 🙌",
       "Just DMed you!"
     ],
-    "dm": "Hey! Here's the link to try FashClick 👉 https://fashclick.io/\nAny questions, just reply here 🙂"
+    "dm": "Hey! 👋 Thanks for commenting.\nReply LINK and I'll send it right over 🔗"
   },
 
   "comment_rules": [],
@@ -23,8 +23,8 @@
     },
     {
       "name": "link request",
-      "keywords": ["link", "shoot", "try", "website"],
-      "reply": "Here you go 👉 https://fashclick.io/"
+      "keywords": ["link", "yes", "send", "shoot", "try", "website"],
+      "reply": "Here you go 👉 https://fashclick.io/\nAny questions, just reply here 🙂"
     }
   ],
   "dm_default": null
