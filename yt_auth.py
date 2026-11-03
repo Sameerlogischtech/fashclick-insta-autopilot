@@ -28,17 +28,42 @@ def save(env_updates):
     config.ENV_FILE.write_text(env, encoding="utf-8")
 
 
+def remote_sign_in(InstalledAppFlow):
+    """For a channel owned by someone else: they sign in on their own device from a link.
+
+    Google then sends their browser to http://localhost:1/?code=..., which doesn't load on their
+    device; they copy that address and send it back. The code in it is single-use, expires in a few
+    minutes, and is useless without this folder's youtube_client.json.
+    """
+    import os
+    os.environ.setdefault("OAUTHLIB_INSECURE_TRANSPORT", "1")   # the loopback redirect is plain http
+    flow = InstalledAppFlow.from_client_secrets_file(str(CLIENT_FILE), SCOPES, redirect_uri="http://localhost:1")
+    url, _ = flow.authorization_url(prompt="select_account consent", access_type="offline")
+    print("\nSend this link to the channel owner:\n\n" + url + "\n")
+    print("Tell them: open it, sign in, pick the {} channel, click 'Advanced' -> 'Go to Content Autopilot',\n"
+          "allow everything. Their browser will then say the page can't be reached. That's expected:\n"
+          "they copy the whole address from the address bar and send it back to you.\n".format(config.ACCOUNT))
+    answer = input("Paste the address they sent (starts with http://localhost:1/?): ").strip()
+    if "code=" not in answer:
+        sys.exit("That doesn't contain a sign-in code. Run this again and ask for the full address.")
+    flow.fetch_token(authorization_response=answer.replace("https://", "http://", 1))
+    return flow.credentials
+
+
 def main():
     if not CLIENT_FILE.exists():
         sys.exit("Put the downloaded OAuth client file here as youtube_client.json first.")
     from google_auth_oauthlib.flow import InstalledAppFlow
     from googleapiclient.discovery import build
-    flow = InstalledAppFlow.from_client_secrets_file(str(CLIENT_FILE), SCOPES)
-    print("A browser window will open. Sign in and choose the {} YouTube channel.".format(config.ACCOUNT))
-    # select_account: always show Google's account / brand-channel chooser instead of reusing the last pick.
-    creds = flow.run_local_server(port=0, prompt="select_account consent", access_type="offline",
-                                  authorization_prompt_message="", success_message=
-                                  "Connected. You can close this tab and go back to Claude.")
+    if "--remote" in sys.argv:
+        creds = remote_sign_in(InstalledAppFlow)
+    else:
+        flow = InstalledAppFlow.from_client_secrets_file(str(CLIENT_FILE), SCOPES)
+        print("A browser window will open. Sign in and choose the {} YouTube channel.".format(config.ACCOUNT))
+        # select_account: always show Google's account / brand-channel chooser instead of reusing the last pick.
+        creds = flow.run_local_server(port=0, prompt="select_account consent", access_type="offline",
+                                      authorization_prompt_message="", success_message=
+                                      "Connected. You can close this tab and go back to Claude.")
     if not creds.refresh_token:
         sys.exit("Google didn't return a refresh token. Run this again.")
     yt = build("youtube", "v3", credentials=creds, cache_discovery=False)
