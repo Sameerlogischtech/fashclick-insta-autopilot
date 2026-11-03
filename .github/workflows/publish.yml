@@ -1,10 +1,10 @@
 # Schedule owner: Sameerlogischtech
-# Posts scheduled reels, photos, carousels and stories when their time comes.
+# Posts scheduled reels, photos, carousels and stories (Instagram and Facebook) when their time comes.
 # Schedule them from your Mac with:  python content.py add <files> --at "..." --account <brand>
 # Runs once per brand; a brand without its IG_USER_ID secret is skipped.
 #
 # Needs repository secrets: IG_ACCESS_TOKEN, CONTENT_KEY,
-#   IG_USER_ID (fashclick), IG_USER_ID_VAANICRAFT, IG_USER_ID_VRITTOS
+#   IG_USER_ID (fashclick), IG_USER_ID_VAANICRAFT, IG_USER_ID_VRITTOS, FB_PAGE_ID[_VAANICRAFT|_VRITTOS]
 name: Publish scheduled content
 
 on:
@@ -53,5 +53,8 @@ jobs:
           IG_ACCESS_TOKEN_VAANICRAFT: ${{ secrets.IG_ACCESS_TOKEN_VAANICRAFT }}
           IG_ACCESS_TOKEN_VRITTOS: ${{ secrets.IG_ACCESS_TOKEN_VRITTOS }}
           CONTENT_KEY: ${{ secrets.CONTENT_KEY }}
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          FB_PAGE_ID_VAANICRAFT: ${{ secrets.FB_PAGE_ID_VAANICRAFT }}
+          FB_PAGE_ID_VRITTOS: ${{ secrets.FB_PAGE_ID_VRITTOS }}
           DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
         run: python content.py post-due

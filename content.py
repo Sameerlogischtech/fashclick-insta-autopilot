@@ -184,7 +184,7 @@ def cmd_add(args):
     return item_id
 
 
-def queue_item(kind, files, caption, when, first_comment="", cover=None, origin=None):
+def queue_item(kind, files, caption, when, first_comment="", cover=None, origin=None, platform="instagram"):
     """Validate, encrypt and add one post to the queue (not pushed). Returns its id."""
     key = _key(create=True)
     files = [Path(f) for f in files]
@@ -238,6 +238,8 @@ def queue_item(kind, files, caption, when, first_comment="", cover=None, origin=
         item["cover"] = store(Path(cover), "{}-cover.enc".format(item_id), "cover")
     if origin:
         item["origin"] = origin
+    if platform != "instagram":
+        item["platform"] = platform
 
     queue = load_queue(key)
     queue.append(item)
@@ -259,7 +261,7 @@ def cmd_list(args):
         status = state.get("status", "waiting")
         when = datetime.fromisoformat(item["post_at"]).astimezone().strftime("%a %d %b %H:%M")
         extra = state.get("permalink") or state.get("error", "")
-        print("{}  {:<8} {:<8} {:<16} {}  {}".format(item["id"], item["type"], status, when,
+        print("{}  {:<9} {:<8} {:<8} {:<16} {}  {}".format(item["id"], item.get("platform", "instagram"), item["type"], status, when,
                                                     ", ".join(item.get("source", [])), extra)[:200])
 
 
@@ -325,6 +327,18 @@ def post_item(client, item, key, workdir):
 
     kind, caption = item["type"], item.get("caption", "")
     f, path = decrypted[0]
+    if item.get("platform") == "facebook":
+        if kind == "reel":
+            return client.publish_reel(str(path), caption)
+        if kind == "photo":
+            return client.publish_photo(urls[f["name"]], caption)
+        if kind == "carousel":   # Facebook has no carousel post: several photos in one post
+            return client.publish_album([urls[f["name"]] for f, _ in decrypted if f["ext"] == ".jpg"], caption)
+        if kind == "story":
+            if f["ext"] == ".jpg":
+                return client.publish_story(image_url=urls[f["name"]])
+            return client.publish_story(video_path=str(path))
+        raise ValueError("unknown type " + kind)
     if kind == "reel":
         return client.publish_reel(video_path=str(path), caption=caption,
                                    cover_url=urls[cover[0]["name"]] if cover else None)
@@ -346,7 +360,8 @@ def cmd_post_due(args):
     if not QUEUE_FILE.exists():
         log.info("[%s] Nothing scheduled yet.", config.ACCOUNT)
         return
-    if not config.IG_USER_ID and not config.DRY_RUN:
+    ready = {"instagram": bool(config.IG_USER_ID), "facebook": bool(config.FB_PAGE_ID)}
+    if not any(ready.values()) and not config.DRY_RUN:
         log.info("[%s] Not set up yet (no IG_USER_ID_%s); skipping.", config.ACCOUNT, config.ACCOUNT.upper())
         return
     key = _key()
@@ -354,20 +369,30 @@ def cmd_post_due(args):
     posted = load_posted()
     now = datetime.now(timezone.utc)
     due = [i for i in sorted(queue, key=lambda i: i["post_at"])
-           if i["id"] not in posted and datetime.fromisoformat(i["post_at"]) <= now]
+           if i["id"] not in posted and datetime.fromisoformat(i["post_at"]) <= now
+           and (config.DRY_RUN or ready.get(i.get("platform", "instagram")))]
     log.info("[%s] %d scheduled item(s), %d due now%s", config.ACCOUNT, len(queue), len(due),
              " [DRY_RUN]" if config.DRY_RUN else "")
     if not due:
         return
-    client = InstagramClient()
+    from fb_api import FacebookClient
+    clients = {}
+
+    def client_for(platform):
+        if platform not in clients:
+            clients[platform] = FacebookClient() if platform == "facebook" else InstagramClient()
+        return clients[platform]
+
     for item in due:
-        log.info("Posting %s %s", item["type"], item["id"])
+        platform = item.get("platform", "instagram")
+        log.info("Posting %s %s on %s", item["type"], item["id"], platform)
         with tempfile.TemporaryDirectory() as workdir:
             try:
+                client = client_for(platform)
                 media_id = post_item(client, item, key, workdir)
                 record = {"status": "posted", "media_id": media_id,
                           "permalink": client.permalink(media_id)}
-                if item.get("first_comment"):
+                if item.get("first_comment") and platform == "instagram":
                     # A failed comment shouldn't mark the post itself as failed.
                     try:
                         client.comment(media_id, item["first_comment"])

@@ -22,35 +22,40 @@ import content
 from autoreply import CAPTION_KEYWORD  # same rule the auto-reply bot uses
 
 
-def rows_for(schedule, product):
+def rows_for(schedule, product, platforms=("instagram",)):
+    """-> (row, when, platform) for each platform the row is meant for (Instagram, Facebook)."""
     # e.g. "Asia/Kolkata (IST, UTC+05:30)" -> Asia/Kolkata
     tz = ZoneInfo(schedule.get("timezone", "Asia/Kolkata").split()[0])
     for row in schedule["items"]:
-        if row.get("product", "").lower() != product.lower() or "instagram" not in row.get("platforms", "").lower():
+        if row.get("product", "").lower() != product.lower():
             continue
         when = datetime.strptime(row["date"] + " " + row["time_ist"], "%Y-%m-%d %H:%M").replace(tzinfo=tz)
-        yield row, when
+        for platform in platforms:
+            if platform in row.get("platforms", "").lower():
+                yield row, when, platform
 
 
-def to_post(row):
+def to_post(row, platform="instagram"):
     """-> (kind, files, caption, first_comment, cover), after checking every file exists."""
-    kind, files, caption, first, cover = _to_post(row)
+    kind, files, caption, first, cover = _to_post(row, platform)
     for f in list(files) + ([Path(cover)] if cover else []):
         if not Path(f).is_file():
             raise FileNotFoundError("missing file {}".format(f))
     return kind, files, caption, first, cover
 
 
-def _to_post(row):
+def _to_post(row, platform="instagram"):
     media = Path(row["media"])
     if not media.exists():
         raise FileNotFoundError("missing {}".format(media))
     if row["type"] == "story":
         return "story", [media], "", "", None
-    caption, first = content.split_first_comment(
-        Path(row["caption_instagram"]).read_text(encoding="utf-8") if row.get("caption_instagram") else "")
+    cap_file = row.get("caption_" + platform)
+    caption, first = content.split_first_comment(Path(cap_file).read_text(encoding="utf-8") if cap_file else "")
+    if platform == "facebook":
+        first = ""   # Facebook captions already end with their question; no separate first comment
     if row["type"] == "reel":
-        return "reel", [media], caption, first, (row.get("cover") or None)
+        return "reel", [media], caption, first, (row.get("cover") or None) if platform == "instagram" else None
     # "post" or "carousel (N slides)": a folder of 01.png, 02.png, ...
     slides = sorted(p for p in media.iterdir()
                     if re.fullmatch(r"\d+\.(png|jpe?g|webp|mp4|mov)", p.name, re.I))
@@ -65,6 +70,7 @@ def main():
     parser.add_argument("schedule")
     parser.add_argument("--product", help="Product name in the schedule (default: the --account, e.g. VaaniCraft)")
     parser.add_argument("--apply", action="store_true", help="Queue and push (otherwise just preview)")
+    parser.add_argument("--facebook", action="store_true", help="Include Facebook rows even without FB_PAGE_ID (preview/testing)")
     args = parser.parse_args()
 
     schedule = json.loads(Path(args.schedule).read_text(encoding="utf-8"))
@@ -83,9 +89,14 @@ def main():
     queued = skipped = errors = 0
     product = args.product or config.ACCOUNT
     print("Account: {}  (schedule product: {})".format(config.ACCOUNT, product))
-    for row, when in sorted(rows_for(schedule, product), key=lambda r: r[1]):
+    platforms = ["instagram"] + (["facebook"] if (config.FB_PAGE_ID or args.facebook) else [])
+    print("Platforms: " + ", ".join(platforms) + ("" if "facebook" in platforms else
+          "  (Facebook skipped: no FB_PAGE_ID_{} yet)".format(config.ACCOUNT.upper())))
+    for row, when, platform in sorted(rows_for(schedule, product, platforms), key=lambda r: (r[1], r[2])):
         origin = "{} {} {} {}".format(row["date"], row["time_ist"], row["type"], row["id"])
-        slot = "{:<20} {}".format(row["type"], when.astimezone().strftime("%a %d %b %H:%M"))
+        if platform != "instagram":
+            origin = platform + "|" + origin   # Instagram keeps the original key, so old queues still match
+        slot = "{:<9} {:<20} {}".format(platform, row["type"], when.astimezone().strftime("%a %d %b %H:%M"))
         if origin in existing:
             print("already queued  " + slot)
             skipped += 1
@@ -97,16 +108,16 @@ def main():
         # One bad item (missing file, wrong photo size...) is reported and skipped;
         # the rest of the week still gets queued. Fix it and run again.
         try:
-            kind, files, caption, first, cover = to_post(row)
-            label = "{:<8} {}  {:>2} file(s){}{}".format(
-                kind, when.astimezone().strftime("%a %d %b %H:%M"), len(files),
+            kind, files, caption, first, cover = to_post(row, platform)
+            label = "{:<9} {:<8} {}  {:>2} file(s){}{}".format(
+                platform, kind, when.astimezone().strftime("%a %d %b %H:%M"), len(files),
                 "  +cover" if cover else "", "  +1st comment" if first else "")
             keyword = CAPTION_KEYWORD.search(caption) if caption else None
             print("{}  {}  {}".format("QUEUE " if args.apply else "would queue", label,
                                       "keyword " + keyword.group(1) if keyword else ""))
             if args.apply:
                 content.queue_item(kind, files, caption, when, first_comment=first, cover=cover,
-                                   origin=origin)
+                                   origin=origin, platform=platform)
             queued += 1
         except (SystemExit, Exception) as exc:
             print("ERROR           {}: {}".format(slot, exc))

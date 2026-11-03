@@ -66,6 +66,8 @@ GRAPH_HOST = os.getenv("GRAPH_HOST", "") or (
 # Which id sends DMs. Defaults to the Instagram account; set a Facebook Page id
 # here if Meta answers DM calls with an "unsupported" error.
 IG_MESSAGING_ID = _per_account("IG_MESSAGING_ID", fallback=False) or IG_USER_ID
+# The brand's Facebook Page (FB_PAGE_ID_VAANICRAFT ...; fashclick may use plain FB_PAGE_ID).
+FB_PAGE_ID = _per_account("FB_PAGE_ID", fallback=False)
 
 # DRY_RUN logs what would be sent to Instagram instead of sending it.
 DRY_RUN = _bool("DRY_RUN")
