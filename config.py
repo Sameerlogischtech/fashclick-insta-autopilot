@@ -28,6 +28,8 @@ IG_MESSAGING_ID = os.getenv("IG_MESSAGING_ID", "") or IG_USER_ID
 
 # DRY_RUN logs what would be sent to Instagram instead of sending it.
 DRY_RUN = _bool("DRY_RUN")
+# QUIET_LOGS hides usernames and message text from logs (for public CI logs).
+QUIET_LOGS = _bool("QUIET_LOGS")
 
 RULES_FILE = BASE_DIR / os.getenv("RULES_FILE", "rules.json")
 QUEUE_FILE = BASE_DIR / os.getenv("QUEUE_FILE", "queue.json")

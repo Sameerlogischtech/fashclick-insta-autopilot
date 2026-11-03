@@ -47,6 +47,7 @@ def start_time(since):
 
 
 def check_comments(cutoff, media_limit):
+    answered = 0
     for media in client.recent_media(limit=media_limit):
         if not media.get("comments_count"):
             continue
@@ -54,17 +55,22 @@ def check_comments(cutoff, media_limit):
             if parse_ig_time(c["timestamp"]) < cutoff:
                 continue
             sender = c.get("from") or {"username": c.get("username")}
-            handle_comment({"id": c["id"], "text": c.get("text", ""), "from": sender,
-                            "media": {"id": media["id"], "caption": media.get("caption", "")}})
+            answered += bool(handle_comment(
+                {"id": c["id"], "text": c.get("text", ""), "from": sender,
+                 "media": {"id": media["id"], "caption": media.get("caption", "")}}))
+    return answered
 
 
 def check_messages(cutoff):
+    answered = 0
     for convo in client.recent_conversations():
         for msg in convo.get("messages", {}).get("data", []):
             if parse_ig_time(msg["created_time"]) < cutoff:
                 continue
-            handle_message({"sender": msg.get("from", {}),
-                            "message": {"mid": msg["id"], "text": msg.get("message", "")}})
+            answered += bool(handle_message(
+                {"sender": msg.get("from", {}),
+                 "message": {"mid": msg["id"], "text": msg.get("message", "")}}))
+    return answered
 
 
 def main():
@@ -78,23 +84,26 @@ def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
     cutoff = start_time(args.since)
-    log.info("Watching @%s's last %d posts%s, answering anything after %s%s",
-             config.IG_USER_ID, args.posts, "" if args.no_dms else " and DMs",
-             cutoff.astimezone().strftime("%d %b %H:%M"), " [DRY_RUN]" if config.DRY_RUN else "")
+    log.info("Watching %s's last %d posts%s, answering anything after %s%s",
+             "the account" if config.QUIET_LOGS else config.IG_USER_ID, args.posts,
+             "" if args.no_dms else " and DMs",
+             cutoff.astimezone().strftime("%d %b %H:%M %Z"), " [DRY_RUN]" if config.DRY_RUN else "")
 
     dms_enabled = not args.no_dms
     while True:
+        comments = dms = 0
         try:
-            check_comments(cutoff, args.posts)
+            comments = check_comments(cutoff, args.posts)
         except InstagramError as exc:
             log.error("Comment check failed: %s", exc)
         if dms_enabled:
             try:
-                check_messages(cutoff)
+                dms = check_messages(cutoff)
             except InstagramError as exc:
                 # Reading DMs may need a published app; keep comments working regardless.
                 log.warning("Can't read DMs, so DM keyword replies are off: %s", exc)
                 dms_enabled = False
+        log.info("Answered %d comment(s) and %d DM(s) this check.", comments, dms)
         if args.once:
             break
         time.sleep(args.every)

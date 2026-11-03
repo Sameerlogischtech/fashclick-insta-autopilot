@@ -97,7 +97,7 @@ def handle_comment(value):
 
     # Never answer ourselves, or we'd loop on our own public replies.
     if not comment_id or sender.get("id") == config.IG_USER_ID:
-        return
+        return False
 
     user_media = "{}:{}".format(sender.get("id"), media_id)
 
@@ -109,13 +109,18 @@ def handle_comment(value):
 
     already_dmed = update_state(claim)
     if already_dmed is None:
-        return
+        return False
 
     rule = pick_comment_rule(load_rules(), media_id, text, caption)
-    log.info("Comment from @%s: %r -> rule %s", sender.get("username"), text, rule.get("name", "default"))
+    if config.QUIET_LOGS:
+        log.info("New comment -> rule %s", rule.get("name", "default"))
+    else:
+        log.info("Comment from @%s: %r -> rule %s", sender.get("username"), text, rule.get("name", "default"))
 
     replies = rule.get("public_replies") or []
     dm = rule.get("dm")
+    if not (replies or dm):
+        return False
     try:
         if replies:
             client.reply_to_comment(comment_id, random.choice(replies))
@@ -125,6 +130,8 @@ def handle_comment(value):
             update_state(lambda s: s["dmed_user_media"].append(user_media))
     except InstagramError as exc:
         log.error("Comment %s: %s", comment_id, exc)
+        return False
+    return True
 
 
 def handle_message(event):
@@ -135,7 +142,7 @@ def handle_message(event):
 
     # Echoes are copies of messages we sent; skip them and our own id.
     if message.get("is_echo") or not mid or sender_id == config.IG_USER_ID:
-        return
+        return False
 
     def claim(state):
         if mid in state["handled_messages"]:
@@ -144,18 +151,24 @@ def handle_message(event):
         return True
 
     if not update_state(claim):
-        return
+        return False
 
     rules = load_rules()
     rule = find_rule(rules.get("dm_rules", []), message.get("text", ""))
     reply = rule["reply"] if rule else rules.get("dm_default")
-    log.info("DM from %s: %r -> %s", sender_id, message.get("text"), rule["name"] if rule else "default")
+    name = rule["name"] if rule else "default"
+    if config.QUIET_LOGS:
+        log.info("New DM -> %s", name)
+    else:
+        log.info("DM from %s: %r -> %s", sender_id, message.get("text"), name)
     if not reply:
-        return
+        return False
     try:
         client.send_dm(sender_id, reply)
     except InstagramError as exc:
         log.error("DM %s: %s", mid, exc)
+        return False
+    return True
 
 
 def process(payload):
