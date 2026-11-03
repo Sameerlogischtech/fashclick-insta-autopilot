@@ -41,6 +41,9 @@ QUEUE_FILE = CONTENT_DIR / "queue.enc"
 POSTED_FILE = CONTENT_DIR / "posted.json"   # written by the poster; ids and media ids only
 PUBLISHED_DIR = config.PUBLISHED_DIR        # published/<account>/
 
+# Errors that mean "access is temporarily gone", not "this post is bad": retry on later runs.
+TEMPORARY_ERRORS = ("API access blocked", "'code': 190", "'code': 4,", "'code': 17,", "'code': 32,", "'code': 613",
+                    "Error validating access token", "rate limit", "quotaExceeded", "backendError")
 VIDEO_EXTS = {".mp4", ".mov"}
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp"}
 MAX_FILE_BYTES = 95 * 1024 * 1024   # GitHub refuses files over 100 MB
@@ -415,6 +418,11 @@ def cmd_post_due(args):
                     except InstagramError as exc:
                         record["first_comment"] = "failed: {}".format(str(exc)[:200])
             except (InstagramError, RuntimeError, KeyError) as exc:
+                if any(k in str(exc) for k in TEMPORARY_ERRORS):
+                    # Account-level block or expired token: the post itself is fine. Leave it waiting,
+                    # so it goes out on a later run once access is back, instead of failing for good.
+                    log.error("Not posted yet, will retry %s (%s): %s", item["id"], platform, str(exc)[:160])
+                    continue
                 log.error("Failed to post %s: %s", item["id"], exc)
                 record = {"status": "failed", "error": str(exc)[:300]}
         record["at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
