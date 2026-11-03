@@ -4,8 +4,8 @@ Free, self-hosted replacement for paid Instagram tools. It uses only the **offic
 
 | Script | What it does |
 |---|---|
-| `post_reel.py` | Posts one reel right now |
-| `scheduler.py` | Posts reels from `queue.json` at the times you set |
+| `content.py` | Schedules reels, photo posts, carousels and stories. The cloud posts them on time, even with your Mac off. |
+| `post_reel.py` | Posts one reel right now from your Mac |
 | `poller.py` | Checks comments and DMs every minute and answers them using `rules.json`. **Works without publishing the Meta app.** |
 | `webhook_server.py` | Same, but instant. Only works once the Meta app is published (Live) |
 | `subscribe_webhooks.py` | Connects your account's comments and DMs to the webhook (run once) |
@@ -62,34 +62,56 @@ Then test:
 python check_setup.py
 ```
 
-## 4. Post reels
+## 4. Schedule reels, posts, carousels and stories
 
-Set `DRY_RUN=false` in `.env` to post for real. Leave it `true` to see what would happen without posting.
-
-```bash
-# Caption from a matching .txt file next to the video (reels/day1.txt)
-python post_reel.py reels/day1.mp4
-
-# Or give the caption directly
-python post_reel.py reels/day1.mp4 --caption "Hook line... #tag"
-```
-
-Reel requirements: MP4 (H.264 + AAC), 9:16 vertical (1080×1920 is best), 3 seconds to 15 minutes, under 300 MB.
-
-### Schedule a week of reels
+Schedule from your Mac. GitHub Actions posts them on time (checked every 5 minutes), even while your Mac is off.
 
 ```bash
-cp queue.example.json queue.json   # edit videos, captions, times
-python scheduler.py --loop         # leave running; checks every 5 min
+# Reel: caption comes from reels/saree.txt next to the video
+.venv/bin/python content.py add reels/saree.mp4 --at "2026-11-05 18:00"
+
+# Photo post
+.venv/bin/python content.py add look.jpg --caption "New kurti drop ✨ Comment KURTI" --at "tomorrow 10:00"
+
+# Carousel: 2-10 photos/videos, in this order
+.venv/bin/python content.py add 1.jpg 2.jpg 3.jpg --caption "Swipe for all 3 looks" --at "2026-11-06 19:30"
+
+# Story: photo or video, no caption
+.venv/bin/python content.py add story.mp4 --type story --at "2026-11-05 20:00"
+
+# Post as soon as possible
+.venv/bin/python content.py add reels/saree.mp4 --at now
+
+.venv/bin/python content.py list            # what's scheduled, posted or failed (+ links)
+.venv/bin/python content.py remove ab12cd   # unschedule
+.venv/bin/python content.py retry ab12cd    # try a failed one again
 ```
 
-Or without leaving a terminal open, run it from cron every 10 minutes (`crontab -e`):
+Each `add` encrypts the files and caption, saves them in `content/`, and pushes to GitHub. Times are in your Mac's time zone.
 
-```
-*/10 * * * * cd /full/path/to/insta-autopilot && .venv/bin/python scheduler.py >> scheduler.log 2>&1
+**Privacy:** upcoming posts are stored **encrypted** with `CONTENT_KEY`, so nobody can see them in the public repo before they go live. Photos are copied to `published/` (public) only at the moment they're posted, because Instagram has to download them from a public link. Videos upload straight to Instagram.
+
+**One-time setup:** the first `add` creates `CONTENT_KEY` in `.env`. Copy it to GitHub so the cloud can decrypt:
+
+```bash
+gh secret set CONTENT_KEY --body "$(grep ^CONTENT_KEY= .env | cut -d= -f2)"
 ```
 
-Your Mac must be awake at post time. Each item is marked `posted` or `failed` in `queue.json`, so nothing is posted twice.
+Keep `.env` safe. Without `CONTENT_KEY`, scheduled posts can't be read.
+
+**Requirements**
+- Reels: MP4/MOV, 9:16 (1080×1920), 3 s–15 min. Each file under 95 MB (GitHub's limit).
+- Photos and carousels: any JPG/PNG/WebP, converted to JPEG automatically. Shape between 4:5 portrait (1080×1350) and 1.91:1 landscape. The tool refuses others.
+- Captions: up to 2,200 characters and 30 hashtags. Put `Comment KEYWORD` in the caption to switch on auto-replies for that post.
+- Stories: no captions, and **link stickers, polls and music can't be added through the API**. Add those in the Instagram app if you need them.
+
+**Check on it:** GitHub → **Actions → Publish scheduled content**, or `content.py list` (run `git pull` first to get the latest status).
+
+### Post one reel right now (from your Mac)
+
+```bash
+.venv/bin/python post_reel.py reels/day1.mp4   # caption from reels/day1.txt
+```
 
 ## 5. Auto-reply to comments and DMs
 
@@ -123,7 +145,7 @@ Changes apply immediately. No restart is needed.
 Leave it running. Every 60 seconds it reads your last 10 posts' comments and your recent DMs, and answers new ones.
 - It only answers comments made **after you start it**, so old comments never get a surprise reply. Use `--since 3h` to include the last 3 hours.
 - It remembers what it already answered (in `state.json`), so restarting never double-replies.
-- Your Mac must be awake. To keep it running in the background, see the cron/launchd tip under "Schedule a week of reels".
+- Your Mac must be awake. For replies with your Mac off, use the cloud setup in section 7 instead.
 
 ### Instant replies: webhook (needs the Meta app published)
 

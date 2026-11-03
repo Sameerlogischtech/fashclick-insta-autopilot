@@ -74,38 +74,78 @@ class InstagramClient:
         return self._request("POST", "{}/subscribed_apps".format(self.user_id),
                              params={"subscribed_fields": fields})
 
-    # ---------- publishing reels ----------
+    # ---------- publishing ----------
+    # Every post type follows the same steps: create a media container (uploading
+    # the video if there is one), wait for Instagram to process it, then publish.
+    # Photos must be at a public image_url; videos upload straight from disk.
+
+    def _container(self, params, video_path=None, video_url=None):
+        params = dict(params)
+        if video_url:
+            params["video_url"] = video_url
+        elif video_path:
+            params["upload_type"] = "resumable"
+        container_id = self._request("POST", "{}/media".format(self.user_id), params=params)["id"]
+        log.info("Created %s container %s", params.get("media_type", "IMAGE"), container_id)
+        if video_path and not video_url:
+            self._upload_file(container_id, video_path)
+        return container_id
+
+    def _publish(self, container_id, kind, poll_seconds=10, timeout_seconds=900):
+        self._wait_until_ready(container_id, poll_seconds, timeout_seconds)
+        published = self._request("POST", "{}/media_publish".format(self.user_id),
+                                  params={"creation_id": container_id})
+        log.info("Published %s, media id %s", kind, published["id"])
+        return published["id"]
 
     def publish_reel(self, video_path=None, video_url=None, caption="", share_to_feed=True,
                      cover_url=None, poll_seconds=10, timeout_seconds=900):
         """Upload a reel (local file or public URL), wait for processing, publish it."""
         if not (video_path or video_url):
             raise InstagramError("Give either a local video_path or a public video_url")
-
-        params = {
-            "media_type": "REELS",
-            "caption": caption,
-            "share_to_feed": "true" if share_to_feed else "false",
-        }
+        params = {"media_type": "REELS", "caption": caption,
+                  "share_to_feed": "true" if share_to_feed else "false"}
         if cover_url:
             params["cover_url"] = cover_url
-        if video_url:
-            params["video_url"] = video_url
+        container_id = self._container(params, video_path, video_url)
+        return self._publish(container_id, "reel", poll_seconds, timeout_seconds)
+
+    def publish_photo(self, image_url, caption=""):
+        """Single photo feed post. image_url must be a public JPEG."""
+        container_id = self._container({"image_url": image_url, "caption": caption})
+        return self._publish(container_id, "photo")
+
+    def publish_carousel(self, items, caption=""):
+        """2-10 items, each {"image_url": ...} or {"video_path": ...}."""
+        if not 2 <= len(items) <= 10:
+            raise InstagramError("A carousel needs 2 to 10 photos/videos")
+        children = []
+        for item in items:
+            if item.get("image_url"):
+                children.append(self._container({"image_url": item["image_url"],
+                                                 "is_carousel_item": "true"}))
+            else:
+                child = self._container({"media_type": "VIDEO", "is_carousel_item": "true"},
+                                        video_path=item.get("video_path"),
+                                        video_url=item.get("video_url"))
+                self._wait_until_ready(child, 10, 900)
+                children.append(child)
+        container_id = self._container({"media_type": "CAROUSEL", "caption": caption,
+                                        "children": ",".join(children)})
+        return self._publish(container_id, "carousel")
+
+    def publish_story(self, image_url=None, video_path=None, video_url=None):
+        """Photo or video story. Stickers, links and music can't be added via the API."""
+        if image_url:
+            container_id = self._container({"media_type": "STORIES", "image_url": image_url})
         else:
-            params["upload_type"] = "resumable"
+            container_id = self._container({"media_type": "STORIES"}, video_path, video_url)
+        return self._publish(container_id, "story")
 
-        container = self._request("POST", "{}/media".format(self.user_id), params=params)
-        container_id = container["id"]
-        log.info("Created media container %s", container_id)
-
-        if video_path:
-            self._upload_file(container_id, video_path)
-
-        self._wait_until_ready(container_id, poll_seconds, timeout_seconds)
-        published = self._request("POST", "{}/media_publish".format(self.user_id),
-                                  params={"creation_id": container_id})
-        log.info("Published reel, media id %s", published["id"])
-        return published["id"]
+    def permalink(self, media_id):
+        if self.dry_run:
+            return ""
+        return self._request("GET", media_id, params={"fields": "permalink"}).get("permalink", "")
 
     def _upload_file(self, container_id, video_path):
         size = os.path.getsize(video_path)

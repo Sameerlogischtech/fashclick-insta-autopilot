@@ -1,0 +1,45 @@
+# Posts scheduled reels, photos, carousels and stories when their time comes.
+# Schedule them from your Mac with:  python content.py add <files> --at "..."
+#
+# Needs repository secrets: IG_ACCESS_TOKEN, IG_USER_ID, CONTENT_KEY
+name: Publish scheduled content
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Only log what would be posted"
+        type: boolean
+        default: false
+
+# Never let two runs overlap, or the same post could go out twice.
+concurrency:
+  group: publish-content
+  cancel-in-progress: false
+
+permissions:
+  contents: write   # to save published/ photos and content/posted.json
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Post anything that's due
+        env:
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          CONTENT_KEY: ${{ secrets.CONTENT_KEY }}
+          DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
+        run: python content.py post-due
