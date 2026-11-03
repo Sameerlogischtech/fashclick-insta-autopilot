@@ -183,13 +183,13 @@ A system-user token set to **Never** doesn't expire, so you can skip this.
 
 ## 7. Run 24/7 in the cloud (GitHub Actions, free)
 
-`.github/workflows/autoreply.yml` runs `poller.py --once` every 5 minutes on GitHub's servers, so replies keep going while your Mac is off.
+`.github/workflows/autoreply.yml` runs `poller.py --once` every 30 minutes on GitHub's servers, so replies keep going while your Mac is off.
 
 - Secrets live in **repo → Settings → Secrets and variables → Actions**: `IG_ACCESS_TOKEN`, `IG_USER_ID`, `IG_APP_SECRET`. They are never in the code.
 - The memory of answered comments is kept in the Actions cache, which isn't visible to the public.
 - **Run it now:** repo → **Actions → Instagram auto-reply → Run workflow**.
 - **See what it did:** open any run under **Actions** and read the "Check comments and DMs" step.
-- GitHub may start a scheduled run a few minutes late. Replies usually arrive within 5–15 minutes.
+- GitHub may start a scheduled run a few minutes late. Replies usually arrive within 30–40 minutes. Each run uses about 1 of the 2,000 free private-repo minutes per month (about 1,440 used).
 - If the repo has no new commits for 60 days, GitHub pauses scheduled workflows and emails you. Click **Enable workflow** in the Actions tab to resume.
 
 ⚠️ **Don't also run `poller.py` on your Mac** while the cloud one is on. They keep separate memories, so both would answer the same comment.

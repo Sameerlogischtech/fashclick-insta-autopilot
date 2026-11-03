@@ -7,7 +7,7 @@ name: Instagram auto-reply
 
 on:
   schedule:
-    - cron: "*/5 * * * *"   # every 5 minutes (GitHub may run it a few minutes late)
+    - cron: "7,37 * * * *"  # every 30 minutes (private repo: fits the free 2,000 min/month)
   workflow_dispatch:         # "Run workflow" button for a manual check
 
 # Never let two runs overlap, or the same comment could be answered twice.
