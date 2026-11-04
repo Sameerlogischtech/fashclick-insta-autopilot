@@ -413,9 +413,31 @@ def cmd_post_due(args):
                 clients[platform] = FacebookClient() if platform == "facebook" else InstagramClient()
         return clients[platform]
 
+    def record_state(message):
+        save_posted(posted)
+        commit_and_push([POSTED_FILE], message)
+
+    stuck = [i for i, s in posted.items() if s.get("status") == "posting"]
+    if stuck:
+        log.warning("Marked 'posting' but never confirmed (check the app; if it isn't there, run "
+                    "`content.py retry <id>`): %s", ", ".join(stuck))
+
+    push_problem = None
     for item in due:
         platform = item.get("platform", "instagram")
         log.info("Posting %s %s on %s", item["type"], item["id"], platform)
+        if not config.DRY_RUN:
+            # Claim the item in the repo BEFORE posting. If the claim can't be saved we don't post,
+            # and if anything goes wrong after posting the claim is still there, so a later run
+            # never posts the same thing twice. Worst case is one post to check by hand, never a duplicate.
+            posted[item["id"]] = {"status": "posting", "at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+            try:
+                record_state("Claim scheduled post")
+            except RuntimeError as exc:
+                log.error("Could not save the claim for %s, not posting it this run: %s", item["id"], exc)
+                del posted[item["id"]]
+                push_problem = exc
+                break
         with tempfile.TemporaryDirectory() as workdir:
             try:
                 client = client_for(platform)
@@ -435,16 +457,32 @@ def cmd_post_due(args):
                     # Account-level block or expired token: the post itself is fine. Leave it waiting,
                     # so it goes out on a later run once access is back, instead of failing for good.
                     log.error("Not posted yet, will retry %s (%s): %s", item["id"], platform, str(exc)[:160])
+                    if not config.DRY_RUN:
+                        del posted[item["id"]]   # release the claim; nothing was posted
+                        try:
+                            record_state("Release claim (will retry)")
+                        except RuntimeError as exc2:
+                            push_problem = exc2   # stays 'posting': safe, just needs a manual retry
                     continue
                 log.error("Failed to post %s: %s", item["id"], exc)
                 record = {"status": "failed", "error": str(exc)[:300]}
+            except Exception as exc:   # network drop, Google API error, ...: it may or may not be live
+                log.error("Unexpected error posting %s: %s", item["id"], exc)
+                record = {"status": "failed",
+                          "error": "Unexpected error, check the app before retrying: {}".format(str(exc)[:250])}
         record["at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
         log.info("%s -> %s %s", item["id"], record["status"], record.get("permalink", ""))
         if config.DRY_RUN:
             continue
         posted[item["id"]] = record
-        save_posted(posted)
-        commit_and_push([POSTED_FILE], "Record posted content")
+        try:
+            record_state("Record posted content")
+        except RuntimeError as exc:
+            # The claim is already saved, so this post won't go out again; only its link is missing.
+            log.error("Posted %s but could not save the result (claim stays, no duplicate): %s", item["id"], exc)
+            push_problem = exc
+    if push_problem:
+        raise RuntimeError("Some results could not be saved to GitHub: {}".format(push_problem))
 
 
 def main():
