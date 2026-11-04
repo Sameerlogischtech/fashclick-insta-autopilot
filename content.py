@@ -20,6 +20,7 @@ import base64
 import json
 import logging
 import os
+import random
 import secrets
 import shutil
 import subprocess
@@ -114,10 +115,22 @@ def commit_and_push(paths, message):
         return
     git("-c", "user.name=insta-autopilot", "-c", "user.email=autopilot@users.noreply.github.com",
         "commit", "-q", "-m", message)
-    for attempt in range(3):
-        if subprocess.run(["git", "push", "-q"], cwd=config.BASE_DIR).returncode == 0:
+    # The brand jobs run side by side and push to the same branch, so losing the race is normal.
+    # The cloud checkout is shallow (one commit), which breaks a plain `pull --rebase`, so fetch
+    # full history first and rebase onto the remote branch explicitly.
+    branch = git("rev-parse", "--abbrev-ref", "HEAD", check=False) or "main"
+    if branch == "HEAD":
+        branch = os.getenv("GITHUB_REF_NAME", "main")
+    if git("rev-parse", "--is-shallow-repository", check=False) == "true":
+        git("fetch", "-q", "--unshallow", "origin", check=False)
+    for attempt in range(8):
+        if subprocess.run(["git", "push", "-q", "origin", "HEAD:" + branch], cwd=config.BASE_DIR).returncode == 0:
             return
-        git("pull", "-q", "--rebase", check=False)
+        time.sleep(2 + random.random() * 4 * (attempt + 1))
+        git("fetch", "-q", "origin", branch, check=False)
+        if subprocess.run(["git", "rebase", "-q", "origin/" + branch], cwd=config.BASE_DIR,
+                          capture_output=True).returncode != 0:
+            git("rebase", "--abort", check=False)
     raise RuntimeError("git push failed")
 
 

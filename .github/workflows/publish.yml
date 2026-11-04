@@ -36,6 +36,8 @@ jobs:
       ACCOUNT: ${{ matrix.account }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history, so a lost push race can rebase cleanly
 
       - uses: actions/setup-python@v5
         with:
