@@ -104,8 +104,14 @@ def save_posted(posted):
 
 # ---------- git helpers ----------
 
+# The cloud runner has no git identity, and a rebase (which rewrites commits) refuses to run without one.
+GIT_ENV = dict(os.environ, GIT_AUTHOR_NAME="insta-autopilot", GIT_COMMITTER_NAME="insta-autopilot",
+               GIT_AUTHOR_EMAIL="autopilot@users.noreply.github.com",
+               GIT_COMMITTER_EMAIL="autopilot@users.noreply.github.com")
+
+
 def git(*args, check=True):
-    return subprocess.run(["git"] + list(args), cwd=config.BASE_DIR, check=check,
+    return subprocess.run(["git"] + list(args), cwd=config.BASE_DIR, check=check, env=GIT_ENV,
                           capture_output=True, text=True).stdout.strip()
 
 
@@ -124,11 +130,11 @@ def commit_and_push(paths, message):
     if git("rev-parse", "--is-shallow-repository", check=False) == "true":
         git("fetch", "-q", "--unshallow", "origin", check=False)
     for attempt in range(8):
-        if subprocess.run(["git", "push", "-q", "origin", "HEAD:" + branch], cwd=config.BASE_DIR).returncode == 0:
+        if subprocess.run(["git", "push", "-q", "origin", "HEAD:" + branch], cwd=config.BASE_DIR, env=GIT_ENV).returncode == 0:
             return
         time.sleep(2 + random.random() * 4 * (attempt + 1))
         git("fetch", "-q", "origin", branch, check=False)
-        if subprocess.run(["git", "rebase", "-q", "origin/" + branch], cwd=config.BASE_DIR,
+        if subprocess.run(["git", "rebase", "-q", "origin/" + branch], cwd=config.BASE_DIR, env=GIT_ENV,
                           capture_output=True).returncode != 0:
             git("rebase", "--abort", check=False)
     raise RuntimeError("git push failed")
