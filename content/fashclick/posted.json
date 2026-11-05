@@ -43,11 +43,6 @@
   "permalink": "",
   "status": "posted"
  },
- "e83344": {
-  "at": "2026-11-04T13:32:43+00:00",
-  "error": "Video upload failed: {'debug_info': {'retriable': False, 'type': 'ProcessingFailedError', 'message': 'Request processing failed'}}",
-  "status": "failed"
- },
  "f5f5ad": {
   "at": "2026-11-04T04:37:17+00:00",
   "media_id": "18111955667218467",
