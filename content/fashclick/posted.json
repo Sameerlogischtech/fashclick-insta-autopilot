@@ -37,6 +37,10 @@
   "permalink": "https://www.facebook.com/reel/1007689961586180/",
   "status": "posted"
  },
+ "e21ebb": {
+  "at": "2026-11-05T04:32:14+00:00",
+  "status": "posting"
+ },
  "e83344": {
   "at": "2026-11-04T13:32:43+00:00",
   "error": "Video upload failed: {'debug_info': {'retriable': False, 'type': 'ProcessingFailedError', 'message': 'Request processing failed'}}",
