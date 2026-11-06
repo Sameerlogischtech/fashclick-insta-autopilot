@@ -6,24 +6,45 @@
       "Check your DMs 🙌",
       "Just DMed you!"
     ],
-    "dm": "Hey! 👋 Thanks for commenting.\nReply LINK and I'll send it right over 🔗"
+    "dm": "Hey! 👋 Thanks for commenting.\nReply LINK and I'll send it right over 🔗",
+    "per_keyword": {
+      "TRYON": {
+        "dm": "Hey! 👋 Here's Virtual Try-On: upload your customer's photo, add the dress, and send her the look.\nhttps://fashclick.io/?utm_source=instagram&utm_medium=dm&utm_campaign=wk1_1107_virtual-try-on\nYou get 5 free credits, no card. Any questions, just reply here 🙂"
+      },
+      "LOOK": {
+        "dm": "Hey! 👋 Here's Outfit Builder: put 2 pieces together on a model in one photo and sell the whole look.\nhttps://fashclick.io/?utm_source=instagram&utm_medium=dm&utm_campaign=wk1_1109_outfit-builder\nYou get 5 free credits, no card. Any questions, just reply here 🙂"
+      },
+      "LIBRARY": {
+        "dm": "Hey! 👋 Here's FashClick Products: every piece with its code, photos, season and category, searchable in seconds. Adding products is free.\nhttps://fashclick.io/?utm_source=instagram&utm_medium=dm&utm_campaign=wk1_1110_product-library\nAny questions, just reply here 🙂"
+      }
+    }
   },
-
   "comment_rules": [],
   "comment_default": {
     "public_replies": [],
     "dm": null
   },
-
   "dm_rules": [
     {
       "name": "price question",
-      "keywords": ["price", "cost", "pricing", "how much"],
+      "keywords": [
+        "price",
+        "cost",
+        "pricing",
+        "how much"
+      ],
       "reply": "Thanks for asking! Plans and free credits are all here 👉 https://fashclick.io/"
     },
     {
       "name": "link request",
-      "keywords": ["link", "yes", "send", "shoot", "try", "website"],
+      "keywords": [
+        "link",
+        "yes",
+        "send",
+        "shoot",
+        "try",
+        "website"
+      ],
       "reply": "Here you go 👉 https://fashclick.io/\nAny questions, just reply here 🙂"
     }
   ],

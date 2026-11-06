@@ -84,7 +84,10 @@ def pick_comment_rule(rules, media_id, text, caption=None):
     if settings.get("enabled", True):
         keyword = caption_keyword(media_id, caption)
         if keyword and matches(text, [keyword]):
-            return dict(settings, name="caption keyword " + keyword)
+            # Optional per-keyword reply ("per_keyword": {"TRYON": {"dm": ...}}) overrides the generic one.
+            override = {k.upper(): v for k, v in (settings.get("per_keyword") or {}).items()}.get(keyword.upper(), {})
+            base = {k: v for k, v in settings.items() if k != "per_keyword"}
+            return dict(base, **override, name="caption keyword " + keyword)
     return find_rule(rules.get("comment_rules", []), text) or rules.get("comment_default") or {}
 
 

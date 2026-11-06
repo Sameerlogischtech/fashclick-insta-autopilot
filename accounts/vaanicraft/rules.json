@@ -6,24 +6,48 @@
       "Check your DMs 🙌",
       "Just DMed you!"
     ],
-    "dm": "Hey! 👋 Thanks for commenting.\nReply LINK and I'll send it right over 🔗"
+    "dm": "Hey! 👋 Thanks for commenting.\nReply LINK and I'll send it right over 🔗",
+    "per_keyword": {
+      "CAROUSEL": {
+        "dm": "Hey! 👋 Here's Carousel Studio: 1 idea in, 7 LinkedIn slides out, ready to edit, post, schedule or download as a PDF.\nhttps://vaanicraft.io/?utm_source=instagram&utm_medium=dm&utm_campaign=wk1_1106_carousel-studio\nAny questions, just reply here 🙂"
+      },
+      "INSIGHTS": {
+        "dm": "Hey! 👋 Here's Performance Memory: your LinkedIn posts sync every 24 hours and it shows which one broke out.\nhttps://vaanicraft.io/?utm_source=instagram&utm_medium=dm&utm_campaign=wk1_1107_performance-memory\nAny questions, just reply here 🙂"
+      },
+      "ENDING": {
+        "dm": "Hey! 👋 Here's how VaaniCraft gives every post a clear ending (no more \"Thoughts?\"), plus a CTA Library to reuse what works.\nhttps://vaanicraft.io/?utm_source=instagram&utm_medium=dm&utm_campaign=wk1_1109_post-endings\nAny questions, just reply here 🙂"
+      },
+      "PILLARS": {
+        "dm": "Hey! 👋 Here's how VaaniCraft builds your content pillars from your goals, with a weekly plan and a 30-day calendar.\nhttps://vaanicraft.io/?utm_source=instagram&utm_medium=dm&utm_campaign=wk1_1110_content-pillars\nAny questions, just reply here 🙂"
+      }
+    }
   },
-
   "comment_rules": [],
   "comment_default": {
     "public_replies": [],
     "dm": null
   },
-
   "dm_rules": [
     {
       "name": "price question",
-      "keywords": ["price", "cost", "pricing", "how much"],
+      "keywords": [
+        "price",
+        "cost",
+        "pricing",
+        "how much"
+      ],
       "reply": "Thanks for asking! Plans and pricing are all here 👉 https://vaanicraft.io/"
     },
     {
       "name": "link request",
-      "keywords": ["link", "yes", "send", "shoot", "try", "website"],
+      "keywords": [
+        "link",
+        "yes",
+        "send",
+        "shoot",
+        "try",
+        "website"
+      ],
       "reply": "Here you go 👉 https://vaanicraft.io/\nAny questions, just reply here 🙂"
     }
   ],

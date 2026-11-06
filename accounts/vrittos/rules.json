@@ -6,24 +6,45 @@
       "Check your DMs 🙌",
       "Just DMed you!"
     ],
-    "dm": "Hey! 👋 Thanks for commenting.\nReply LINK and I'll send it right over 🔗"
+    "dm": "Hey! 👋 Thanks for commenting.\nReply LINK and I'll send it right over 🔗",
+    "per_keyword": {
+      "QUOTE": {
+        "dm": "Hey! 👋 Here's how VrittOS shows the story count and the cost before any code is written. You approve first, then credits are charged per story as it's built.\nhttps://vrittos.ai/?utm_source=instagram&utm_medium=dm&utm_campaign=wk1_1107_cost-before-code\n14 days free, 100 credits, no card. Any questions, just reply here 🙂"
+      },
+      "STORE": {
+        "dm": "Hey! 👋 Here's the Maison Aura build: 10 epics, 41 stories, 41 reviewed pull requests, from a founder who doesn't code.\nhttps://vrittos.ai/showcase/maison-aura?utm_source=instagram&utm_medium=dm&utm_campaign=wk1_1109_maison-aura-store\n14 days free, 100 credits, no card. Any questions, just reply here 🙂"
+      },
+      "TRACE": {
+        "dm": "Hey! 👋 Here's how VrittOS traces every requirement to its story, pull request and test result, on one timeline.\nhttps://vrittos.ai/?utm_source=instagram&utm_medium=dm&utm_campaign=wk1_1110_story-traceability\n14 days free, 100 credits, no card. Any questions, just reply here 🙂"
+      }
+    }
   },
-
   "comment_rules": [],
   "comment_default": {
     "public_replies": [],
     "dm": null
   },
-
   "dm_rules": [
     {
       "name": "price question",
-      "keywords": ["price", "cost", "pricing", "how much"],
+      "keywords": [
+        "price",
+        "cost",
+        "pricing",
+        "how much"
+      ],
       "reply": "Thanks for asking! Plans and pricing are all here 👉 https://vrittos.ai/"
     },
     {
       "name": "link request",
-      "keywords": ["link", "yes", "send", "shoot", "try", "website"],
+      "keywords": [
+        "link",
+        "yes",
+        "send",
+        "shoot",
+        "try",
+        "website"
+      ],
       "reply": "Here you go 👉 https://vrittos.ai/\nAny questions, just reply here 🙂"
     }
   ],
