@@ -20,8 +20,9 @@
   "status": "posted"
  },
  "22ce4b": {
-  "at": "2026-11-07T15:02:21+00:00",
-  "status": "posting"
+  "at": "2026-11-07T15:02:58+00:00",
+  "error": "Video upload failed: {'debug_info': {'retriable': False, 'type': 'ProcessingFailedError', 'message': 'Request processing failed'}}",
+  "status": "failed"
  },
  "30c23c": {
   "at": "2026-11-04T04:41:11+00:00",
