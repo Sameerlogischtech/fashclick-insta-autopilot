@@ -103,8 +103,9 @@
   "status": "posted"
  },
  "bc8e05": {
-  "at": "2026-11-07T15:02:08+00:00",
-  "status": "posting"
+  "at": "2026-11-07T15:02:46+00:00",
+  "error": "Video upload failed: {'debug_info': {'retriable': False, 'type': 'ProcessingFailedError', 'message': 'Request processing failed'}}",
+  "status": "failed"
  },
  "c52735": {
   "at": "2026-11-04T13:32:25+00:00",
