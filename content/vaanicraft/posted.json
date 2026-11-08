@@ -121,6 +121,10 @@
   "permalink": "https://www.instagram.com/stories/vaanicraft_official/4025597972804701875",
   "status": "posted"
  },
+ "af356f": {
+  "at": "2026-11-08T04:31:24+00:00",
+  "status": "posting"
+ },
  "bc8e05": {
   "at": "2026-11-07T15:02:46+00:00",
   "error": "Video upload failed: {'debug_info': {'retriable': False, 'type': 'ProcessingFailedError', 'message': 'Request processing failed'}}",
