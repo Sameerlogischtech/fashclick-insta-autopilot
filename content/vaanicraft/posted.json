@@ -109,6 +109,10 @@
   "permalink": "https://www.instagram.com/reel/DfZuIB9jcHI/",
   "status": "posted"
  },
+ "abfc04": {
+  "at": "2026-11-08T03:31:25+00:00",
+  "status": "posting"
+ },
  "bc8e05": {
   "at": "2026-11-07T15:02:46+00:00",
   "error": "Video upload failed: {'debug_info': {'retriable': False, 'type': 'ProcessingFailedError', 'message': 'Request processing failed'}}",
