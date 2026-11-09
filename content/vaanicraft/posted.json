@@ -52,8 +52,9 @@
   "status": "posted"
  },
  "27dd27": {
-  "at": "2026-11-09T13:31:56+00:00",
-  "status": "posting"
+  "at": "2026-11-09T13:32:31+00:00",
+  "error": "Video upload failed: {'debug_info': {'retriable': False, 'type': 'ProcessingFailedError', 'message': 'Request processing failed'}}",
+  "status": "failed"
  },
  "2810e6": {
   "at": "2026-11-05T07:31:55+00:00",
