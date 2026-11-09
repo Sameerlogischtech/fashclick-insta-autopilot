@@ -62,8 +62,9 @@
   "status": "posted"
  },
  "3b4435": {
-  "at": "2026-11-09T13:31:59+00:00",
-  "status": "posting"
+  "at": "2026-11-09T13:32:35+00:00",
+  "error": "Video upload failed: {'debug_info': {'retriable': False, 'type': 'ProcessingFailedError', 'message': 'Request processing failed'}}",
+  "status": "failed"
  },
  "3b88ae": {
   "at": "2026-11-08T03:32:42+00:00",
