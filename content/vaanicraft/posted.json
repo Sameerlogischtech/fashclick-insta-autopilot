@@ -76,8 +76,9 @@
   "status": "posted"
  },
  "392afd": {
-  "at": "2026-11-10T13:31:55+00:00",
-  "status": "posting"
+  "at": "2026-11-10T13:32:33+00:00",
+  "error": "Video upload failed: {'debug_info': {'retriable': False, 'type': 'ProcessingFailedError', 'message': 'Request processing failed'}}",
+  "status": "failed"
  },
  "3c19e4": {
   "at": "2026-11-09T04:32:25+00:00",
