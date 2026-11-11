@@ -180,8 +180,9 @@
   "status": "posted"
  },
  "ac3db0": {
-  "at": "2026-11-11T04:32:08+00:00",
-  "status": "posting"
+  "at": "2026-11-11T04:32:44+00:00",
+  "error": "Video upload failed: {'debug_info': {'retriable': False, 'type': 'ProcessingFailedError', 'message': 'Request processing failed'}}",
+  "status": "failed"
  },
  "ac8ad8": {
   "at": "2026-11-09T07:32:21+00:00",
