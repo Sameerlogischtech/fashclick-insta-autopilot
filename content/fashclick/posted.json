@@ -290,8 +290,9 @@
   "status": "posted"
  },
  "b9f90d": {
-  "at": "2026-11-12T13:32:16+00:00",
-  "status": "posting"
+  "at": "2026-11-12T13:32:53+00:00",
+  "error": "Video upload failed: {'debug_info': {'retriable': False, 'type': 'ProcessingFailedError', 'message': 'Request processing failed'}}",
+  "status": "failed"
  },
  "d04733": {
   "at": "2026-11-12T04:31:50+00:00",
