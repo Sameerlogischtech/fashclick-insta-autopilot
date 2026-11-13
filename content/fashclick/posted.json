@@ -302,6 +302,10 @@
   "permalink": "https://www.youtube.com/shorts/ZR8ho_tc3Ig",
   "status": "posted"
  },
+ "b9682e": {
+  "at": "2026-11-13T04:31:43+00:00",
+  "status": "posting"
+ },
  "b9f90d": {
   "at": "2026-11-12T13:32:53+00:00",
   "error": "Video upload failed: {'debug_info': {'retriable': False, 'type': 'ProcessingFailedError', 'message': 'Request processing failed'}}",
