@@ -137,6 +137,10 @@
   "permalink": "https://www.instagram.com/p/DfZE5DjGkBx/",
   "status": "posted"
  },
+ "4d6bb1": {
+  "at": "2026-11-13T13:31:55+00:00",
+  "status": "posting"
+ },
  "52fed6": {
   "at": "2026-11-11T13:32:36+00:00",
   "error": "Video upload failed: {'debug_info': {'retriable': False, 'type': 'ProcessingFailedError', 'message': 'Request processing failed'}}",
