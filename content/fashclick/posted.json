@@ -61,6 +61,10 @@
   "error": "Video upload failed: {'debug_info': {'retriable': False, 'type': 'ProcessingFailedError', 'message': 'Request processing failed'}}",
   "status": "failed"
  },
+ "24e905": {
+  "at": "2026-11-14T07:31:50+00:00",
+  "status": "posting"
+ },
  "2afd96": {
   "at": "2026-11-14T04:32:40+00:00",
   "media_id": "18049469456827012",
