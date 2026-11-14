@@ -340,6 +340,10 @@
   "error": "Video upload failed: {'debug_info': {'retriable': False, 'type': 'ProcessingFailedError', 'message': 'Request processing failed'}}",
   "status": "failed"
  },
+ "cc8436": {
+  "at": "2026-11-14T04:31:33+00:00",
+  "status": "posting"
+ },
  "d04733": {
   "at": "2026-11-12T04:31:50+00:00",
   "media_id": "1540882921123626",
