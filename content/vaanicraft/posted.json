@@ -19,8 +19,9 @@
   "status": "posted"
  },
  "0c2171": {
-  "at": "2026-11-15T13:31:54+00:00",
-  "status": "posting"
+  "at": "2026-11-15T13:32:31+00:00",
+  "error": "Video upload failed: {'debug_info': {'retriable': False, 'type': 'ProcessingFailedError', 'message': 'Request processing failed'}}",
+  "status": "failed"
  },
  "0c23ab": {
   "at": "2026-11-10T13:32:44+00:00",
