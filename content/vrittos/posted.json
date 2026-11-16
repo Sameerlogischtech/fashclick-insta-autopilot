@@ -552,8 +552,9 @@
   "status": "posted"
  },
  "f4ddf2": {
-  "at": "2026-11-16T13:32:08+00:00",
-  "status": "posting"
+  "at": "2026-11-16T13:32:45+00:00",
+  "error": "Video upload failed: {'debug_info': {'retriable': False, 'type': 'ProcessingFailedError', 'message': 'Request processing failed'}}",
+  "status": "failed"
  },
  "f54479": {
   "at": "2026-11-07T07:31:51+00:00",
