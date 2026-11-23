@@ -396,6 +396,10 @@
   "error": "Video upload failed: {'debug_info': {'retriable': False, 'type': 'ProcessingFailedError', 'message': 'Request processing failed'}}",
   "status": "failed"
  },
+ "972688": {
+  "at": "2026-11-23T13:32:19+00:00",
+  "status": "posting"
+ },
  "97a237": {
   "at": "2026-11-19T13:32:35+00:00",
   "first_comment": "posted (pin it in the app)",
