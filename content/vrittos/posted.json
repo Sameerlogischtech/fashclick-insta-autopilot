@@ -397,8 +397,11 @@
   "status": "failed"
  },
  "972688": {
-  "at": "2026-11-23T13:32:19+00:00",
-  "status": "posting"
+  "at": "2026-11-23T13:32:59+00:00",
+  "first_comment": "posted (pin it in the app)",
+  "media_id": "18119873807047234",
+  "permalink": "https://www.instagram.com/reel/DgFfsJxjr7S/",
+  "status": "posted"
  },
  "97a237": {
   "at": "2026-11-19T13:32:35+00:00",
